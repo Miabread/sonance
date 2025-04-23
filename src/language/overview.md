@@ -1,8 +1,4 @@
-# Sonance Book
-
-See the [Preface](https://miabread.github.io/sonance-book/preface.html) to learn about this book.
-
-See the [Language Overview](https://miabread.github.io/sonance-book/language/overview.html) to learn more about the Sonance language.
+# Overview
 
 ```sonance
 import {

@@ -1,13 +1,14 @@
 # Summary
 
-[Prelude](./prelude.md)
+- [Preface](./preface.md)
 
-# Sonance
+# Language
 
-- [Overview](./sonance/overview.md)
-- [Inspirations](./sonance/inspirations.md)
+- [Overview](./language/overview.md)
+- [Inspirations](./language/inspirations.md)
 
 # Guide
+
 - [Getting Started]()
   - [Basics]()
   - [Functions](./guide/getting_started/functions.md)
@@ -21,6 +22,7 @@
   - [Named Impls](./guide/advanced/named_impls.md)
 
 # Reference
+
 - [Standard Library]()
   - [Types]()
   - [Traits]()
