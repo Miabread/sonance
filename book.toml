@@ -7,3 +7,4 @@ title = "Sonance Book"
 
 [output.html]
 additional-js = ["theme/custom-highlight.js"]
+git-repository-url = "https://github.com/Miabread/sonance-book"
