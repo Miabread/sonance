@@ -1,11 +1,10 @@
 # Summary
 
-- [Preface](./preface.md)
+# Sonance Book
 
-# Language
-
-- [Overview](./language/overview.md)
-- [Inspirations](./language/inspirations.md)
+- [Preface](./summary/preface.md)
+- [Overview](./summary/overview.md)
+- [Inspirations](./summary/inspirations.md)
 
 # Guide
 
@@ -23,6 +22,7 @@
 
 # Reference
 
+- [Language](./reference/language.md)
 - [Standard Library]()
   - [Types]()
   - [Traits]()
