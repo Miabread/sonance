@@ -18,7 +18,7 @@
   - [Labels](./guide/advanced/labels.md)
   - [Backpassing](./guide/advanced/backpassing.md)
   - [Traits](./guide/advanced/traits.md)
-  - [Named Impls](./guide/advanced/named_impls.md)
+  - [Advanced Modules](./guide/advanced/advanced_modules.md)
 
 # Reference
 
