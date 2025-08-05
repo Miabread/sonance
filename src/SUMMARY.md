@@ -10,6 +10,7 @@
 
 - [Getting Started]()
   - [Basics]()
+  - [Strings](./guide/getting_started/strings.md)
   - [Functions](./guide/getting_started/functions.md)
   - [Modules](./guide/getting_started/modules.md)
   - [Types](./guide/getting_started/types.md)
