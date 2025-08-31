@@ -5,6 +5,7 @@
 - [Preface](./summary/preface.md)
 - [Overview](./summary/overview.md)
 - [Inspirations](./summary/inspirations.md)
+- [Bibliography](./summary/bibliography.md)
 
 # Guide
 
