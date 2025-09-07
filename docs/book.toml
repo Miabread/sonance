@@ -3,8 +3,8 @@ authors = ["Miabread"]
 language = "en"
 multilingual = false
 src = "src"
-title = "Sonance Book"
+title = "Sonance Docs"
 
 [output.html]
 additional-js = ["theme/custom-highlight.js"]
-git-repository-url = "https://github.com/Miabread/sonance-book"
+git-repository-url = "https://github.com/Miabread/sonance"
