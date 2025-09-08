@@ -1,0 +1,25 @@
+{
+  "name": "sonance-vscode",
+  "displayName": "sonance-vscode",
+  "description": "",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.103.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [{
+      "id": "sonance",
+      "aliases": ["Sonance", "sonance"],
+      "extensions": [".son"],
+      "configuration": "./language-configuration.json"
+    }],
+    "grammars": [{
+      "language": "sonance",
+      "scopeName": "source.sonance",
+      "path": "./syntaxes/sonance.tmLanguage.json"
+    }]
+  }
+}
