@@ -1,3 +1,0 @@
-# Preface
-
-deploy check

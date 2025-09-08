@@ -1,30 +1,20 @@
 # Summary
 
-# Sonance Book
+# Sonance
 
-- [Preface](./summary/preface.md)
-- [Overview](./summary/overview.md)
-- [Inspirations](./summary/inspirations.md)
-- [Bibliography](./summary/bibliography.md)
+- [Overview](./overview.md)
+- [Inspirations](./inspirations.md)
+- [Bibliography](./bibliography.md)
 
-# Guide
+# Design Notes
 
-- [Getting Started]()
-  - [Basics]()
-  - [Strings](./guide/getting_started/strings.md)
-  - [Functions](./guide/getting_started/functions.md)
-  - [Modules](./guide/getting_started/modules.md)
-  - [Types](./guide/getting_started/types.md)
-- [Advanced Features]()
-  - [Blocks](./guide/advanced/blocks.md)
-  - [Labels](./guide/advanced/labels.md)
-  - [Backpassing](./guide/advanced/backpassing.md)
-  - [Traits](./guide/advanced/traits.md)
-  - [Advanced Modules](./guide/advanced/advanced_modules.md)
-
-# Reference
-
-- [Language](./reference/language.md)
-- [Standard Library]()
-  - [Types]()
-  - [Traits]()
+- [Tokens](./design/tokens.md)
+- [Strings](./design/strings.md)
+- [Functions](./design/functions.md)
+- [Modules](./design/modules.md)
+- [Types](./design/types.md)
+- [Blocks](./design/blocks.md)
+- [Labels](./design/labels.md)
+- [Backpassing](./design/backpassing.md)
+- [Traits](./design/traits.md)
+- [Advanced Modules](./design/advanced_modules.md)

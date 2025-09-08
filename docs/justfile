@@ -1,0 +1,6 @@
+serve:
+    mdbook serve
+
+clean:
+    rm -r book
+
