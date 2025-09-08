@@ -1,14 +1,13 @@
 # Language Reference
 
 ## Keywords
+
 | Context   | Keyword  | Description                                    |
 | --------- | -------- | ---------------------------------------------- |
 | Modules   | `module` | Declare modules or implementations             |
 | Modules   | `import` | Import items from other modules                |
 | Modules   | `export` | Make item available to rest of current package |
 | Modules   | `public` | Make item available to external packages       |
-| Types     | `struct` | Declare  struct type                           |
-| Types     | `enum`   | Declare  enum types                            |
 | Types     | `type`   | Alias types                                    |
 | Types     | `trait`  | Declare traits                                 |
 | Functions | `func`   | Declare functions                              |
@@ -20,6 +19,7 @@
 | Patterns  | `match`  | Pattern match an value                         |
 
 ## Punctuation
+
 | Name | Symbol | Description                                |
 | ---- | ------ | ------------------------------------------ |
 |      | `=`    | Assignment, labeled parameters             |

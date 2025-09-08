@@ -1,32 +1,38 @@
 {
-	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
-	"name": "Sonance",
-	"patterns": [
-		{
-			"include": "#keywords"
-		},
-		{
-			"include": "#strings"
-		}
-	],
-	"repository": {
-		"keywords": {
-			"patterns": [{
-				"name": "keyword.control.sonance",
-				"match": "\\b(if|while|for|return)\\b"
-			}]
-		},
-		"strings": {
-			"name": "string.quoted.double.sonance",
-			"begin": "\"",
-			"end": "\"",
-			"patterns": [
-				{
-					"name": "constant.character.escape.sonance",
-					"match": "\\\\."
-				}
-			]
-		}
-	},
-	"scopeName": "source.sonance"
+    "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+    "name": "Sonance",
+    "patterns": [
+        {
+            "include": "#keywords"
+        },
+        {
+            "include": "#strings"
+        }
+    ],
+    "repository": {
+        "keywords": {
+            "patterns": [
+                {
+                    "name": "keyword.control.sonance",
+                    "match": "\\b(match)\\b"
+                },
+                {
+                    "name": "keyword.other.sonance",
+                    "match": "\\b(module|import|export|public|type|trait|func|do|block|let|mut|set)\\b"
+                }
+            ]
+        },
+        "strings": {
+            "name": "string.quoted.double.sonance",
+            "begin": "\"",
+            "end": "\"",
+            "patterns": [
+                {
+                    "name": "constant.character.escape.sonance",
+                    "match": "\\\\."
+                }
+            ]
+        }
+    },
+    "scopeName": "source.sonance"
 }

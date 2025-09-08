@@ -1,7 +1,14 @@
 # Bibliography
 
+### Vscode Extension / TextMate Grammar
+
+- [Vscode Syntax Highlighting Guide](https://code.visualstudio.com/api/language-extensions/syntax-highlight-guide)
+- [Blog about text mate recommended by above](https://www.apeth.com/nonblog/stories/textmatebundle.html)
+- [Common Scope Names](https://macromates.com/manual/en/language_grammars#naming_conventions)
+
 ## Unsorted
 
+- [https://without.boats/blog/references-are-like-jumps/](https://without.boats/blog/references-are-like-jumps/)
 - [https://rust-analyzer.github.io/book/contributing/architecture.html](https://rust-analyzer.github.io/book/contributing/architecture.html)
 - [https://verdagon.dev/blog/group-borrowing](https://verdagon.dev/blog/group-borrowing)
 - [https://verdagon.dev/grimoire/grimoire#the-list](https://verdagon.dev/grimoire/grimoire#the-list)
