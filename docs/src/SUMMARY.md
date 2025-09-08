@@ -18,3 +18,7 @@
 - [Backpassing](./design/backpassing.md)
 - [Traits](./design/traits.md)
 - [Advanced Modules](./design/advanced_modules.md)
+
+# Development Logs
+
+- [Week of 2025-09-08](./devlog/2025-09-08.md)
