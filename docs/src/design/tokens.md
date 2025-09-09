@@ -8,8 +8,8 @@
 | Modules   | `import` | Import items from other modules                |
 | Modules   | `export` | Make item available to rest of current package |
 | Modules   | `public` | Make item available to external packages       |
-| Types     | `type`   | Alias types                                    |
-| Types     | `trait`  | Declare traits                                 |
+| Types     | `type`   | Declare or alias types                         |
+| Types     | `trait`  | Declare or alias traits                        |
 | Functions | `func`   | Declare functions                              |
 | Functions | `do`     | Declare arguments in a block literal           |
 | Functions | `block`  | Block type literal                             |
