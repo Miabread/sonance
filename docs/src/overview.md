@@ -6,7 +6,7 @@ import {
     random { Random, thread_rng },
 };
 
-func read_number(buffer: $String) -> Result<U32, ParseError> {
+func read_number(buffer: $String) -> Result[U32, ParseError] {
     buffer.clear;
     stdin().read_line($buffer).expect;
     buffer.trim.parse

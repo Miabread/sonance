@@ -30,7 +30,7 @@ module type MyType {
 }
 ```
 
-## Trait mdoules
+## Trait modules
 
 Modules can implement a trait for a given type using `->`.
 

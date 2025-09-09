@@ -12,7 +12,7 @@ Monad based
 ## Uses With Containers
 
 ```sonance
-func maybe_sum(x: Option<U32>, y: Option<U32>) -> Option<U32> {
+func maybe_sum(x: Option[U32], y: Option[U32]) -> Option[U32] {
     x.flat_map do(i) {
         y.flat_map do(j) {
             Some(i + j)
@@ -22,7 +22,7 @@ func maybe_sum(x: Option<U32>, y: Option<U32>) -> Option<U32> {
 ```
 
 ```sonance
-func maybe_sum(x: Option<U32>, y: Option<U32>) -> Option<U32> {
+func maybe_sum(x: Option[U32], y: Option[U32]) -> Option[U32] {
     let i = x.flat_map?;
     let j = y.flat_map?;
 

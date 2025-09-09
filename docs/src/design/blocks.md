@@ -4,12 +4,12 @@
 ## Example: `scope`
 
 ```sonance
-func scope<T>(body: block() -> T) -> T {
+func scope[T](body: block() -> T) -> T {
     body!()
 }
 ```
 
-## Example: `Option<T>`
+## Example: `Option[T]`
 
 ```sonance
 condition
@@ -18,14 +18,14 @@ condition
 ```
 
 ```sonance
-func then<T>(self: Boolean, body: block() -> T) -> Option<T> {
+func then[T](self: Boolean, body: block() -> T) -> Option[T] {
     match(self) {
         True -> Some(body!()),
         False -> None,
     }
 }
 
-func else<T>(self: Option<T>, body: block() -> T) -> T {
+func else[T](self: Option[T], body: block() -> T) -> T {
     match(self) {
         Some(value) -> value,
         None -> body!(),

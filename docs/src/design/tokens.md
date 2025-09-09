@@ -29,7 +29,7 @@
 |      | `:`    | Type ascription                            |
 |      | `()`   | Parameters, arguments, grouped expressions |
 |      | `{}`   | Code blocks                                |
-|      | `<>`   | Type generic                               |
+|      | `[]`   | Type parameters / generics                 |
 |      | `!`    | Label declaration, label call              |
 |      | `?`    | Implicit argument, backpassing             |
 |      | `->`   | Return type ascription, match branches     |
