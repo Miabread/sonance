@@ -23,15 +23,6 @@ fn sincos(x: F64) -> type(F64, F64) {
 }
 ```
 
-## Type Modules
-
-```
-module type MyType {
-    ...
-}
-```
-
-
 ## Type Aliases
 
 ```
