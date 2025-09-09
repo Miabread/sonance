@@ -1,7 +1,7 @@
 hljs.registerLanguage("sonance", (hljs) => ({
     name: "Sonance",
     keywords: {
-        keyword: "import func let mut module block do match",
+        keyword: "module import export public type trait func do block let mut set match",
         built_in: "String Result Option Boolean U32",
         literal: "Pass Fail Some None True False Unit",
     },

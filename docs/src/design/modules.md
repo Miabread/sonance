@@ -14,7 +14,7 @@ module;
 
 ## Type modules
 
-Modules can be attached to a type by following the module identifer with the type identifier.
+Modules can be attached to a type by following the module identifier with the type identifier.
 
 ```sonance
 module my_module MyType {
@@ -22,7 +22,7 @@ module my_module MyType {
 }
 ```
 
-Modulles can be "inherent" to a type by using the `type` keyword instead of a module identifier.
+Modules can be "inherent" to a type by using the `type` keyword instead of a module identifier.
 
 ```sonance
 module type MyType {
@@ -43,7 +43,7 @@ module type MyType -> MyTrait {
 This can be done inherent or as a named module.
 
 ```sonance
-module my_implmentation MyType -> MyTrait {
+module my_implementation MyType -> MyTrait {
     ...
 }
 ```
