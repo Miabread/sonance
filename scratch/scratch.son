@@ -1,3 +1,5 @@
-func foo() {
-
-}
+ func main() -> USize {
+        123;
+        456;
+        789
+    }
