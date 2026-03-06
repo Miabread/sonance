@@ -4,7 +4,7 @@ use logos::Logos;
 use spring::{Token, parser};
 
 const SRC: &str = r"
-    1 + 2 * 3 / 4
+    1 / 0
 ";
 
 fn main() {
@@ -14,8 +14,7 @@ fn main() {
         // Convert logos errors into tokens. We want parsing to be recoverable and not fail at the lexing stage, so
         // we have a dedicated `Token::Error` variant that represents a token error that was previously encountered
         .map(|(tok, span)| match tok {
-            // Turn the `Range<usize>` spans logos gives us into chumsky's `SimpleSpan` via `Into`, because it's easier
-            // to work with
+            // Turn the `Range<usize>` spans logos gives us into chumsky's `SimpleSpan` via `Into`, because it's easier to work with
             Ok(tok) => (tok, span.into()),
             Err(()) => (Token::Error, span.into()),
         });
@@ -27,9 +26,8 @@ fn main() {
         .map((0..SRC.len()).into(), |(t, s): (_, _)| (t, s));
 
     // Parse the token stream with our chumsky parser
-    match parser().parse(token_stream).into_result() {
-        // If parsing was successful, attempt to evaluate the s-expression
-        Ok(expr) => println!("result = {}", expr.eval()),
+    let expr = match parser().parse(token_stream).into_result() {
+        Ok(expr) => expr,
         // If parsing was unsuccessful, generate a nice user-friendly diagnostic with ariadne. You could also use
         // codespan, or whatever other diagnostic library you care about. You could even just display-print the errors
         // with Rust's built-in `Display` trait, but it's a little crude
@@ -48,6 +46,12 @@ fn main() {
                     .eprint(Source::from(SRC))
                     .unwrap();
             }
+            return;
         }
+    };
+
+    match expr.eval() {
+        Ok(i) => println!("result = {i}"),
+        Err(e) => eprintln!("error = {e}"),
     }
 }
