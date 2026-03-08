@@ -1,4 +1,4 @@
-use std::fmt::Display;
+pub mod token;
 
 use ariadne::{Color, Label, Report, ReportKind, Source};
 use chumsky::{
@@ -7,10 +7,12 @@ use chumsky::{
 };
 use logos::Logos;
 
+use crate::parse_tree::token::Token;
+
 #[derive(Debug, Clone)]
 pub struct ParseError;
 
-pub fn parse(src: &str) -> Result<Expr, ParseError> {
+pub fn parse(src: &'_ str) -> Result<Vec<Statement<'_>>, ParseError> {
     // Create a logos lexer over the source code
     let token_iter = Token::lexer(src)
         .spanned()
@@ -30,88 +32,57 @@ pub fn parse(src: &str) -> Result<Expr, ParseError> {
 
     // Parse the token stream with our chumsky parser
     // If parsing was unsuccessful, generate a nice user-friendly diagnostic with ariadne
-    parser().parse(token_stream).into_result().map_err(|errs| {
-        for err in errs {
-            Report::build(ReportKind::Error, ((), err.span().into_range()))
-                .with_config(ariadne::Config::new().with_index_type(ariadne::IndexType::Byte))
-                .with_code(3)
-                .with_message(err.to_string())
-                .with_label(
-                    Label::new(((), err.span().into_range()))
-                        .with_message(err.reason().to_string())
-                        .with_color(Color::Red),
-                )
-                .finish()
-                .eprint(Source::from(src))
-                .unwrap();
-        }
-        ParseError
-    })
+    statements()
+        .parse(token_stream)
+        .into_result()
+        .map_err(|errs| {
+            for err in errs {
+                Report::build(ReportKind::Error, ((), err.span().into_range()))
+                    .with_config(ariadne::Config::new().with_index_type(ariadne::IndexType::Byte))
+                    .with_code(3)
+                    .with_message(err.to_string())
+                    .with_label(
+                        Label::new(((), err.span().into_range()))
+                            .with_message(err.reason().to_string())
+                            .with_color(Color::Red),
+                    )
+                    .finish()
+                    .eprint(Source::from(src))
+                    .unwrap();
+            }
+            ParseError
+        })
 }
 
-#[derive(Debug, Clone, Logos, PartialEq)]
-pub enum Token<'src> {
-    Error,
-    #[regex(r"\s+", logos::skip)]
-    Whitespace,
-
-    #[regex(r"[0-9]+")]
-    Int(&'src str),
-    #[regex(r"[a-zA-Z_][a-zA-Z0-9_]*")]
-    Ident(&'src str),
-
-    #[token("(")]
-    OpenParen,
-    #[token(")")]
-    CloseParen,
-    #[token("[")]
-    OpenBracket,
-    #[token("]")]
-    CloseBracket,
-    #[token("{")]
-    OpenBrace,
-    #[token("}")]
-    CloseBrace,
-
-    #[token("+")]
-    Add,
-    #[token("-")]
-    Sub,
-    #[token("*")]
-    Mul,
-    #[token("/")]
-    Div,
-    #[token("->")]
-    Arrow,
-
-    #[token("func")]
-    Func,
-    #[token("int")]
-    TInt,
+pub enum Statement<'src> {
+    Expr(Expr),
+    Macro(&'src str, Vec<Expr>),
 }
 
-impl Display for Token<'_> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Token::Error => write!(f, "<error>"),
-            Token::Whitespace => write!(f, "<whitespace>"),
-            Token::Int(i) => write!(f, "{i}"),
-            Token::Ident(i) => write!(f, "{i}"),
-            Token::OpenParen => write!(f, "("),
-            Token::CloseParen => write!(f, ")"),
-            Token::OpenBracket => write!(f, "["),
-            Token::CloseBracket => write!(f, "]"),
-            Token::OpenBrace => write!(f, "{{"),
-            Token::CloseBrace => write!(f, "}}"),
-            Token::Add => write!(f, "+"),
-            Token::Sub => write!(f, "-"),
-            Token::Mul => write!(f, "*"),
-            Token::Div => write!(f, "/"),
-            Token::Arrow => write!(f, "->"),
-            Token::Func => write!(f, "func"),
-            Token::TInt => write!(f, "int"),
-        }
+pub fn statements<'tokens, 'src: 'tokens, I>()
+-> impl Parser<'tokens, I, Vec<Statement<'src>>, extra::Err<Rich<'tokens, Token<'src>>>>
+where
+    I: ValueInput<'tokens, Token = Token<'src>, Span = SimpleSpan>,
+{
+    let macro_call = select! {
+        Token::Ident(i) => i,
     }
+    .then_ignore(just(Token::Bang))
+    .then(
+        expr()
+            .separated_by(just(Token::Comma))
+            .allow_trailing()
+            .collect()
+            .delimited_by(just(Token::OpenParen), just(Token::CloseParen)),
+    )
+    .map(|(name, args)| Statement::Macro(name, args));
+
+    expr()
+        .map(Statement::Expr)
+        .or(macro_call)
+        .separated_by(just(Token::Semi))
+        .allow_trailing()
+        .collect()
 }
 
 #[derive(Debug, Clone)]
@@ -128,7 +99,7 @@ pub enum Op {
     Div,
 }
 
-pub fn parser<'tokens, 'src: 'tokens, I>()
+pub fn expr<'tokens, 'src: 'tokens, I>()
 -> impl Parser<'tokens, I, Expr, extra::Err<Rich<'tokens, Token<'src>>>>
 where
     I: ValueInput<'tokens, Token = Token<'src>, Span = SimpleSpan>,

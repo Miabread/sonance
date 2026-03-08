@@ -1,6 +1,24 @@
-use crate::parse_tree::{Expr, Op};
+use crate::parse_tree::{Expr, Op, Statement};
 
 pub mod parse_tree;
+
+impl Statement<'_> {
+    pub fn eval(self) -> Result<u64, String> {
+        match self {
+            Statement::Expr(expr) => expr.eval(),
+            Statement::Macro(name, exprs) => match name {
+                "print" => {
+                    for expr in exprs {
+                        print!("{}", expr.eval()?);
+                    }
+                    println!();
+                    Ok(0)
+                }
+                _ => panic!("unknown macro {name}"),
+            },
+        }
+    }
+}
 
 impl Expr {
     pub fn eval(self) -> Result<u64, String> {
