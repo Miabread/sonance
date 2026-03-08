@@ -67,7 +67,7 @@ where
     let macro_call = select! {
         Token::Ident(i) => i,
     }
-    .map_with(|e, ctx| e.with_span(ctx.span()))
+    .spanned()
     .then_ignore(just(Token::Bang))
     .then(
         expr()
@@ -81,7 +81,7 @@ where
     expr()
         .map(Statement::Expr)
         .or(macro_call)
-        .map_with(|e, ctx| e.with_span(ctx.span()))
+        .spanned()
         .separated_by(just(Token::Semi))
         .allow_trailing()
         .collect()
@@ -112,7 +112,7 @@ where
             Token::Int(i) => Expr::Int(i.parse().unwrap()),
             Token::String(s) => Expr::String(s),
         }
-        .map_with(|e, ctx| e.with_span(ctx.span()));
+        .spanned();
 
         let paren = expr.delimited_by(just(Token::OpenParen), just(Token::CloseParen));
 
@@ -125,7 +125,7 @@ where
             ))
             .then(atom)
             .repeated(),
-            |lhs: Spanned<Expr<'_>>, (op, rhs): (_, Spanned<Expr<'_>>), ctx| {
+            |lhs, (op, rhs), ctx| {
                 Expr::BinOp(op, Box::new(lhs), Box::new(rhs)).with_span(ctx.span())
             },
         );
