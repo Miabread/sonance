@@ -55,8 +55,8 @@ pub fn parse(src: &'_ str) -> Result<Vec<Statement<'_>>, ParseError> {
 }
 
 pub enum Statement<'src> {
-    Expr(Expr),
-    Macro(&'src str, Vec<Expr>),
+    Expr(Expr<'src>),
+    Macro(&'src str, Vec<Expr<'src>>),
 }
 
 pub fn statements<'tokens, 'src: 'tokens, I>()
@@ -86,9 +86,10 @@ where
 }
 
 #[derive(Debug, Clone)]
-pub enum Expr {
+pub enum Expr<'src> {
     Int(u64),
-    BinOp(Op, Box<Expr>, Box<Expr>),
+    String(&'src str),
+    BinOp(Op, Box<Expr<'src>>, Box<Expr<'src>>),
 }
 
 #[derive(Debug, Clone)]
@@ -100,18 +101,19 @@ pub enum Op {
 }
 
 pub fn expr<'tokens, 'src: 'tokens, I>()
--> impl Parser<'tokens, I, Expr, extra::Err<Rich<'tokens, Token<'src>>>>
+-> impl Parser<'tokens, I, Expr<'src>, extra::Err<Rich<'tokens, Token<'src>>>>
 where
     I: ValueInput<'tokens, Token = Token<'src>, Span = SimpleSpan>,
 {
     recursive(|expr| {
-        let int = select! {
-            Token::Int(i) => Expr::Int(i.parse().unwrap())
+        let literal = select! {
+            Token::Int(i) => Expr::Int(i.parse().unwrap()),
+            Token::String(s) => Expr::String(s),
         };
 
         let paren = expr.delimited_by(just(Token::OpenParen), just(Token::CloseParen));
 
-        let atom = int.or(paren);
+        let atom = literal.or(paren);
 
         let product = atom.clone().foldl(
             choice((

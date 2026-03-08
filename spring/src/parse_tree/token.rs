@@ -12,6 +12,13 @@ pub enum Token<'src> {
     Int(&'src str),
     #[regex(r"[a-zA-Z_][a-zA-Z0-9_]*")]
     Ident(&'src str),
+    #[regex(r#""([^"\\]*(?:\\[\s\S][^"\\]*)*)""#, |lex| {
+        let mut chars = lex.slice().chars();
+        chars.next();
+        chars.next_back();
+        chars.as_str()
+    })]
+    String(&'src str),
 
     #[token("(")]
     OpenParen,
@@ -56,6 +63,7 @@ impl Display for Token<'_> {
             Token::Whitespace => write!(f, "<whitespace>"),
             Token::Int(i) => write!(f, "{i}"),
             Token::Ident(i) => write!(f, "{i}"),
+            Token::String(s) => write!(f, "{s}"),
             Token::OpenParen => write!(f, "("),
             Token::CloseParen => write!(f, ")"),
             Token::OpenBracket => write!(f, "["),
