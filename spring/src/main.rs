@@ -7,6 +7,6 @@ fn main() {
     let parse_tree = parse_tree::parse(&src).unwrap();
 
     for stmt in parse_tree {
-        stmt.eval().unwrap();
+        stmt.inner.eval().unwrap();
     }
 }

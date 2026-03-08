@@ -7,16 +7,16 @@ pub mod parse_tree;
 impl<'src> Statement<'src> {
     pub fn eval(self) -> Result<Value<'src>, String> {
         match self {
-            Statement::Expr(expr) => expr.eval(),
-            Statement::Macro(name, exprs) => match name {
+            Statement::Expr(expr) => expr.inner.eval(),
+            Statement::Macro(name, exprs) => match name.inner {
                 "print" => {
                     for expr in exprs {
-                        print!("{}", expr.eval()?);
+                        print!("{}", expr.inner.eval()?);
                     }
                     println!();
                     Ok(Value::Unit)
                 }
-                _ => panic!("unknown macro {name}"),
+                _ => panic!("unknown macro {}", name.inner),
             },
         }
     }
@@ -28,10 +28,10 @@ impl<'src> Expr<'src> {
             Expr::Int(i) => Value::Int(i),
             Expr::String(s) => Value::String(s),
             Expr::BinOp(op, lhs, rhs) => {
-                let Value::Int(lhs) = lhs.eval()? else {
+                let Value::Int(lhs) = lhs.inner.eval()? else {
                     return Err("lhs not int".into());
                 };
-                let Value::Int(rhs) = rhs.eval()? else {
+                let Value::Int(rhs) = rhs.inner.eval()? else {
                     return Err("rhs not int".into());
                 };
 

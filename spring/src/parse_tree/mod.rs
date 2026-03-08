@@ -12,7 +12,7 @@ use crate::parse_tree::token::Token;
 #[derive(Debug, Clone)]
 pub struct ParseError;
 
-pub fn parse(src: &'_ str) -> Result<Vec<Statement<'_>>, ParseError> {
+pub fn parse(src: &'_ str) -> Result<Vec<Spanned<Statement<'_>>>, ParseError> {
     // Create a logos lexer over the source code
     let token_iter = Token::lexer(src)
         .spanned()
@@ -55,18 +55,19 @@ pub fn parse(src: &'_ str) -> Result<Vec<Statement<'_>>, ParseError> {
 }
 
 pub enum Statement<'src> {
-    Expr(Expr<'src>),
-    Macro(&'src str, Vec<Expr<'src>>),
+    Expr(Spanned<Expr<'src>>),
+    Macro(Spanned<&'src str>, Vec<Spanned<Expr<'src>>>),
 }
 
 pub fn statements<'tokens, 'src: 'tokens, I>()
--> impl Parser<'tokens, I, Vec<Statement<'src>>, extra::Err<Rich<'tokens, Token<'src>>>>
+-> impl Parser<'tokens, I, Vec<Spanned<Statement<'src>>>, extra::Err<Rich<'tokens, Token<'src>>>>
 where
     I: ValueInput<'tokens, Token = Token<'src>, Span = SimpleSpan>,
 {
     let macro_call = select! {
         Token::Ident(i) => i,
     }
+    .map_with(|e, ctx| e.with_span(ctx.span()))
     .then_ignore(just(Token::Bang))
     .then(
         expr()
@@ -80,6 +81,7 @@ where
     expr()
         .map(Statement::Expr)
         .or(macro_call)
+        .map_with(|e, ctx| e.with_span(ctx.span()))
         .separated_by(just(Token::Semi))
         .allow_trailing()
         .collect()
@@ -89,7 +91,7 @@ where
 pub enum Expr<'src> {
     Int(u64),
     String(&'src str),
-    BinOp(Op, Box<Expr<'src>>, Box<Expr<'src>>),
+    BinOp(Op, Box<Spanned<Expr<'src>>>, Box<Spanned<Expr<'src>>>),
 }
 
 #[derive(Debug, Clone)]
@@ -101,7 +103,7 @@ pub enum Op {
 }
 
 pub fn expr<'tokens, 'src: 'tokens, I>()
--> impl Parser<'tokens, I, Expr<'src>, extra::Err<Rich<'tokens, Token<'src>>>>
+-> impl Parser<'tokens, I, Spanned<Expr<'src>>, extra::Err<Rich<'tokens, Token<'src>>>>
 where
     I: ValueInput<'tokens, Token = Token<'src>, Span = SimpleSpan>,
 {
@@ -109,30 +111,35 @@ where
         let literal = select! {
             Token::Int(i) => Expr::Int(i.parse().unwrap()),
             Token::String(s) => Expr::String(s),
-        };
+        }
+        .map_with(|e, ctx| e.with_span(ctx.span()));
 
         let paren = expr.delimited_by(just(Token::OpenParen), just(Token::CloseParen));
 
         let atom = literal.or(paren);
 
-        let product = atom.clone().foldl(
+        let product = atom.clone().foldl_with(
             choice((
                 just(Token::Mul).to(Op::Mul), //
                 just(Token::Div).to(Op::Div),
             ))
             .then(atom)
             .repeated(),
-            |lhs, (op, rhs)| Expr::BinOp(op, Box::new(lhs), Box::new(rhs)),
+            |lhs: Spanned<Expr<'_>>, (op, rhs): (_, Spanned<Expr<'_>>), ctx| {
+                Expr::BinOp(op, Box::new(lhs), Box::new(rhs)).with_span(ctx.span())
+            },
         );
 
-        product.clone().foldl(
+        product.clone().foldl_with(
             choice((
                 just(Token::Add).to(Op::Add), //
                 just(Token::Sub).to(Op::Sub),
             ))
             .then(product)
             .repeated(),
-            |lhs, (op, rhs)| Expr::BinOp(op, Box::new(lhs), Box::new(rhs)),
+            |lhs, (op, rhs), ctx| {
+                Expr::BinOp(op, Box::new(lhs), Box::new(rhs)).with_span(ctx.span())
+            },
         )
     })
 }
