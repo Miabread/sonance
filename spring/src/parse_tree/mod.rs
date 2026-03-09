@@ -7,12 +7,9 @@ use chumsky::{
 };
 use logos::Logos;
 
-use crate::parse_tree::token::Token;
+use crate::{DummyError, parse_tree::token::Token};
 
-#[derive(Debug, Clone)]
-pub struct ParseError;
-
-pub fn parse(src: &'_ str) -> Result<Vec<Spanned<Statement<'_>>>, ParseError> {
+pub fn parse(src: &'_ str) -> Result<Vec<Spanned<Statement<'_>>>, DummyError> {
     // Create a logos lexer over the source code
     let token_iter = Token::lexer(src)
         .spanned()
@@ -50,7 +47,7 @@ pub fn parse(src: &'_ str) -> Result<Vec<Spanned<Statement<'_>>>, ParseError> {
                     .eprint(Source::from(src))
                     .unwrap();
             }
-            ParseError
+            DummyError
         })
 }
 
