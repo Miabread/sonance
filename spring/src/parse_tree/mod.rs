@@ -1,3 +1,4 @@
+pub mod data;
 pub mod token;
 
 use ariadne::{Color, Label, Report, ReportKind, Source};
@@ -8,6 +9,8 @@ use chumsky::{
 use logos::Logos;
 
 use crate::{DummyError, parse_tree::token::Token};
+
+pub use data::*;
 
 pub fn parse(src: &'_ str) -> Result<Vec<Spanned<Statement<'_>>>, DummyError> {
     // Create a logos lexer over the source code
@@ -51,11 +54,6 @@ pub fn parse(src: &'_ str) -> Result<Vec<Spanned<Statement<'_>>>, DummyError> {
         })
 }
 
-pub enum Statement<'src> {
-    Expr(Spanned<Expr<'src>>),
-    Macro(Spanned<&'src str>, Vec<Spanned<Expr<'src>>>),
-}
-
 pub fn statements<'tokens, 'src: 'tokens, I>()
 -> impl Parser<'tokens, I, Vec<Spanned<Statement<'src>>>, extra::Err<Rich<'tokens, Token<'src>>>>
 where
@@ -82,21 +80,6 @@ where
         .separated_by(just(Token::Semi))
         .allow_trailing()
         .collect()
-}
-
-#[derive(Debug, Clone)]
-pub enum Expr<'src> {
-    Int(u64),
-    String(&'src str),
-    BinOp(Op, Box<Spanned<Expr<'src>>>, Box<Spanned<Expr<'src>>>),
-}
-
-#[derive(Debug, Clone)]
-pub enum Op {
-    Add,
-    Sub,
-    Mul,
-    Div,
 }
 
 pub fn expr<'tokens, 'src: 'tokens, I>()
