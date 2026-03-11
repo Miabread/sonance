@@ -6,22 +6,29 @@ use crate::type_tree::{Context, Type};
 pub struct TypeMismatchError {
     pub produce_expr: SimpleSpan,
     pub consume_expr: SimpleSpan,
-    pub expected: Type,
+    pub expected: Vec<Type>,
     pub received: Type,
 }
 
 impl TypeMismatchError {
     pub fn report(self, ctx: &mut Context<'_>) {
-        if self.expected == Type::Error || self.received == Type::Error {
+        if self.received == Type::Error {
             return;
         }
+
+        let expected = self
+            .expected
+            .into_iter()
+            .map(|ty| format!("{ty}"))
+            .collect::<Vec<_>>()
+            .join(" or ");
 
         ctx.error_count += 1;
 
         Report::build(ReportKind::Error, ((), self.produce_expr.into_range()))
             .with_message(format!(
                 "expected type {} but got type {}",
-                self.expected, self.received
+                expected, self.received
             ))
             .with_label(
                 Label::new(((), self.produce_expr.into_range()))
@@ -30,7 +37,7 @@ impl TypeMismatchError {
             )
             .with_label(
                 Label::new(((), self.consume_expr.into_range()))
-                    .with_message(format!("expected type {} here", self.expected))
+                    .with_message(format!("expected type {} here", expected))
                     .with_color(Color::Blue),
             )
             .finish()

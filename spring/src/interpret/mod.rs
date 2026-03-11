@@ -6,7 +6,7 @@ use ariadne::{Color, ColorGenerator, Label, Report, ReportKind, Source};
 
 use crate::{
     DummyError,
-    type_tree::{Expr, ExprKind, Op, Statement, StatementKind},
+    type_tree::{Expr, ExprKind, Op, Statement, StatementKind, Type},
 };
 
 use error::*;
@@ -94,28 +94,47 @@ fn eval_expr<'src>(expr: &Expr<'src>, ctx: &mut Context<'src>) -> Result<Value<'
         ExprKind::Int(i) => Value::Int(*i),
         ExprKind::Float(f) => Value::Float(*f),
         ExprKind::String(s) => Value::String(s),
-        ExprKind::BinOp(op, lhs, rhs) => {
-            let Value::Int(lhs_value) = eval_expr(lhs, ctx)? else {
-                panic!("expected int value");
-            };
+        ExprKind::BinOp(op, lhs, rhs) => match lhs.ty {
+            Type::Int => {
+                let Value::Int(lhs_value) = eval_expr(lhs, ctx)? else {
+                    panic!("expected int value");
+                };
 
-            let Value::Int(rhs_value) = eval_expr(rhs, ctx)? else {
-                panic!("expected int value");
-            };
+                let Value::Int(rhs_value) = eval_expr(rhs, ctx)? else {
+                    panic!("expected int value");
+                };
 
-            Value::Int(match op {
-                Op::Add => lhs_value + rhs_value,
-                Op::Sub => lhs_value - rhs_value,
-                Op::Mul => lhs_value * rhs_value,
-                Op::Div => {
-                    if rhs_value == 0 {
-                        DivideByZeroError { span: rhs.span }.report(ctx);
-                        return Err(DummyError);
+                Value::Int(match op {
+                    Op::Add => lhs_value + rhs_value,
+                    Op::Sub => lhs_value - rhs_value,
+                    Op::Mul => lhs_value * rhs_value,
+                    Op::Div => {
+                        if rhs_value == 0 {
+                            DivideByZeroError { span: rhs.span }.report(ctx);
+                            return Err(DummyError);
+                        }
+                        lhs_value / rhs_value
                     }
-                    lhs_value / rhs_value
-                }
-            })
-        }
+                })
+            }
+            Type::Float => {
+                let Value::Float(lhs_value) = eval_expr(lhs, ctx)? else {
+                    panic!("expected float value");
+                };
+
+                let Value::Float(rhs_value) = eval_expr(rhs, ctx)? else {
+                    panic!("expected float value");
+                };
+
+                Value::Float(match op {
+                    Op::Add => lhs_value + rhs_value,
+                    Op::Sub => lhs_value - rhs_value,
+                    Op::Mul => lhs_value * rhs_value,
+                    Op::Div => lhs_value / rhs_value,
+                })
+            }
+            _ => panic!("bin op unsupported type"),
+        },
     })
 }
 

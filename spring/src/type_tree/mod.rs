@@ -62,22 +62,22 @@ pub fn type_expr<'src>(
         ExprKind::Float(_) => Type::Float,
         ExprKind::String(_) => Type::String,
         ExprKind::BinOp(_, lhs, rhs) => 'block: {
-            let Type::Int = lhs.ty else {
+            if lhs.ty != Type::Int && lhs.ty != Type::Float {
                 TypeMismatchError {
                     produce_expr: lhs.span,
                     consume_expr: expr.span,
-                    expected: Type::Int,
+                    expected: vec![Type::Int, Type::Float],
                     received: lhs.ty.clone(),
                 }
                 .report(ctx);
                 break 'block Type::Error;
-            };
+            }
 
-            let Type::Int = rhs.ty else {
+            if lhs.ty != rhs.ty {
                 TypeMismatchError {
-                    produce_expr: lhs.span,
+                    produce_expr: rhs.span,
                     consume_expr: expr.span,
-                    expected: Type::Int,
+                    expected: vec![lhs.ty.clone()],
                     received: rhs.ty.clone(),
                 }
                 .report(ctx);
