@@ -60,6 +60,27 @@ pub fn eval_stmt<'src>(
                 Ok(Value::Unit)
             }
 
+            "ty" => {
+                let mut colors = ColorGenerator::new();
+
+                let exprs = exprs.iter().map(|expr| {
+                    Label::new(((), expr.span.into_range()))
+                        .with_message(format!("{}", expr.ty))
+                        .with_color(colors.next())
+                });
+
+                Report::build(
+                    ReportKind::Custom("Debug Types", Color::Blue),
+                    ((), stmt.span.into_range()),
+                )
+                .with_labels(exprs)
+                .finish()
+                .eprint(Source::from(ctx.source))
+                .unwrap();
+
+                Ok(Value::Unit)
+            }
+
             _ => {
                 UnknownBuiltinError { name: name.clone() }.report(ctx);
                 Err(DummyError)
