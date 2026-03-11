@@ -89,7 +89,8 @@ where
 {
     recursive(|expr| {
         let literal = select! {
-            Token::Int(i) => Expr::Int(i.parse().unwrap()),
+            Token::Int(i) => Expr::Int(i),
+            Token::Float(f) => Expr::Float(f),
             Token::String(s) => Expr::String(s),
         }
         .spanned();

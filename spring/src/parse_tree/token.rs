@@ -8,8 +8,10 @@ pub enum Token<'src> {
     #[regex(r"\s+", logos::skip)]
     Whitespace,
 
-    #[regex(r"[0-9]+")]
-    Int(&'src str),
+    #[regex(r"[0-9]+", |lex| lex.slice().parse::<u64>().unwrap())]
+    Int(u64),
+    #[regex(r"[0-9]+\.[0-9]+", |lex| lex.slice().parse::<f64>().unwrap())]
+    Float(f64),
     #[regex(r"[a-zA-Z_][a-zA-Z0-9_]*")]
     Ident(&'src str),
     #[regex(r#""([^"\\]*(?:\\[\s\S][^"\\]*)*)""#, |lex| {
@@ -62,6 +64,7 @@ impl Display for Token<'_> {
             Token::Error => write!(f, "<error>"),
             Token::Whitespace => write!(f, "<whitespace>"),
             Token::Int(i) => write!(f, "{i}"),
+            Token::Float(i) => write!(f, "{i}"),
             Token::Ident(i) => write!(f, "{i}"),
             Token::String(s) => write!(f, "{s}"),
             Token::OpenParen => write!(f, "("),

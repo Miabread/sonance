@@ -48,6 +48,7 @@ pub fn type_expr<'src>(
 ) -> Expr<'src> {
     let kind = match expr.inner {
         parse_tree::Expr::Int(i) => ExprKind::Int(i),
+        parse_tree::Expr::Float(f) => ExprKind::Float(f),
         parse_tree::Expr::String(s) => ExprKind::String(s),
         parse_tree::Expr::BinOp(op, lhs, rhs) => {
             let lhs = type_expr(*lhs, ctx);
@@ -58,6 +59,7 @@ pub fn type_expr<'src>(
 
     let ty = match &kind {
         ExprKind::Int(_) => Type::Int,
+        ExprKind::Float(_) => Type::Float,
         ExprKind::String(_) => Type::String,
         ExprKind::BinOp(_, lhs, rhs) => 'block: {
             let Type::Int = lhs.ty else {

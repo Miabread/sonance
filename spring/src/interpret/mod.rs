@@ -71,6 +71,7 @@ pub fn eval_stmt<'src>(
 fn eval_expr<'src>(expr: &Expr<'src>, ctx: &mut Context<'src>) -> Result<Value<'src>, DummyError> {
     Ok(match &expr.kind {
         ExprKind::Int(i) => Value::Int(*i),
+        ExprKind::Float(f) => Value::Float(*f),
         ExprKind::String(s) => Value::String(s),
         ExprKind::BinOp(op, lhs, rhs) => {
             let Value::Int(lhs_value) = eval_expr(lhs, ctx)? else {
@@ -101,6 +102,7 @@ fn eval_expr<'src>(expr: &Expr<'src>, ctx: &mut Context<'src>) -> Result<Value<'
 pub enum Value<'src> {
     Unit,
     Int(u64),
+    Float(f64),
     String(&'src str),
 }
 
@@ -109,6 +111,7 @@ impl Display for Value<'_> {
         match self {
             Value::Unit => write!(f, "Unit"),
             Value::Int(i) => write!(f, "{i}"),
+            Value::Float(i) => write!(f, "{i}"),
             Value::String(s) => write!(f, "{s}"),
         }
     }

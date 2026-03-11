@@ -33,6 +33,7 @@ pub struct Expr<'src> {
 #[derive(Debug, Clone)]
 pub enum ExprKind<'src> {
     Int(u64),
+    Float(f64),
     String(&'src str),
     BinOp(Op, Box<Expr<'src>>, Box<Expr<'src>>),
 }
@@ -42,6 +43,7 @@ pub enum Type {
     Error,
     Unit,
     Int,
+    Float,
     String,
 }
 
@@ -51,6 +53,7 @@ impl Display for Type {
             Type::Error => write!(f, "<error>"),
             Type::Unit => write!(f, "Unit"),
             Type::Int => write!(f, "Int"),
+            Type::Float => write!(f, "Float"),
             Type::String => write!(f, "String"),
         }
     }

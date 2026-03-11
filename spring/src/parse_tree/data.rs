@@ -9,6 +9,7 @@ pub enum Statement<'src> {
 #[derive(Debug, Clone)]
 pub enum Expr<'src> {
     Int(u64),
+    Float(f64),
     String(&'src str),
     BinOp(Op, Box<Spanned<Expr<'src>>>, Box<Spanned<Expr<'src>>>),
 }
