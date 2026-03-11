@@ -1,12 +1,15 @@
+pub mod error;
+
 use std::fmt::Display;
 
 use ariadne::{Color, ColorGenerator, Label, Report, ReportKind, Source};
-use chumsky::span::SimpleSpan;
 
 use crate::{
     DummyError,
-    type_tree::{Expr, ExprKind, Ident, Op, Statement, StatementKind, Type},
+    type_tree::{Expr, ExprKind, Op, Statement, StatementKind, Type},
 };
+
+use error::*;
 
 pub struct Context<'src> {
     pub source: &'src str,
@@ -62,75 +65,6 @@ pub fn eval_stmt<'src>(
                 Err(DummyError)
             }
         },
-    }
-}
-
-struct UnknownBuiltinError<'src> {
-    name: Ident<'src>,
-}
-
-impl UnknownBuiltinError<'_> {
-    fn report(self, ctx: &mut Context<'_>) {
-        Report::build(ReportKind::Error, ((), self.name.span.into_range()))
-            .with_message(format!("unknown builtin `{}`", self.name.name))
-            .with_label(
-                Label::new(((), self.name.span.into_range()))
-                    .with_message("used here")
-                    .with_color(Color::Red),
-            )
-            .finish()
-            .eprint(Source::from(ctx.source))
-            .unwrap();
-    }
-}
-
-struct TypeMismatchError {
-    produce_expr: SimpleSpan,
-    consume_expr: SimpleSpan,
-    expected: Type,
-    received: Type,
-}
-
-impl TypeMismatchError {
-    fn report(self, ctx: &mut Context<'_>) {
-        Report::build(ReportKind::Error, ((), self.produce_expr.into_range()))
-            .with_message(format!(
-                "expected type {} but got type {}",
-                self.expected, self.received
-            ))
-            .with_label(
-                Label::new(((), self.produce_expr.into_range()))
-                    .with_message(format!("type {} produced here", self.received))
-                    .with_color(Color::Red)
-                    .with_order(-1),
-            )
-            .with_label(
-                Label::new(((), self.consume_expr.into_range()))
-                    .with_message(format!("type {} expected here", self.expected))
-                    .with_color(Color::Blue),
-            )
-            .finish()
-            .eprint(Source::from(ctx.source))
-            .unwrap();
-    }
-}
-
-struct DivideByZeroError {
-    span: SimpleSpan,
-}
-
-impl DivideByZeroError {
-    fn report(self, ctx: &mut Context<'_>) {
-        Report::build(ReportKind::Error, ((), self.span.into_range()))
-            .with_message("divide by 0 by error")
-            .with_label(
-                Label::new(((), self.span.into_range()))
-                    .with_message("value of 0")
-                    .with_color(Color::Red),
-            )
-            .finish()
-            .eprint(Source::from(ctx.source))
-            .unwrap();
     }
 }
 
