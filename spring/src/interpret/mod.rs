@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use ariadne::{Color, Label, Report, ReportKind, Source};
+use ariadne::{Color, ColorGenerator, Label, Report, ReportKind, Source};
 use chumsky::span::SimpleSpan;
 
 use crate::{
@@ -20,12 +20,43 @@ pub fn eval_stmt<'src>(
         StatementKind::Expr(expr) => eval_expr(expr, ctx),
         StatementKind::Macro(name, exprs) => match name.name {
             "print" => {
+                let exprs = exprs
+                    .iter()
+                    .map(|expr| eval_expr(expr, ctx))
+                    .collect::<Result<Vec<_>, DummyError>>()?;
+
                 for expr in exprs {
-                    print!("{}", eval_expr(expr, ctx)?);
+                    print!("{}", expr);
                 }
+
                 println!();
                 Ok(Value::Unit)
             }
+
+            "dbg" => {
+                let mut colors = ColorGenerator::new();
+
+                let exprs = exprs
+                    .iter()
+                    .map(|expr| {
+                        Ok(Label::new(((), expr.span.into_range()))
+                            .with_message(format!("{}", eval_expr(expr, ctx)?))
+                            .with_color(colors.next()))
+                    })
+                    .collect::<Result<Vec<_>, DummyError>>()?;
+
+                Report::build(
+                    ReportKind::Custom("Debug", Color::Blue),
+                    ((), stmt.span.into_range()),
+                )
+                .with_labels(exprs)
+                .finish()
+                .eprint(Source::from(ctx.source))
+                .unwrap();
+
+                Ok(Value::Unit)
+            }
+
             _ => {
                 UnknownBuiltinError { name: name.clone() }.report(ctx);
                 Err(DummyError)
@@ -41,8 +72,6 @@ struct UnknownBuiltinError<'src> {
 impl UnknownBuiltinError<'_> {
     fn report(self, ctx: &mut Context<'_>) {
         Report::build(ReportKind::Error, ((), self.name.span.into_range()))
-            .with_config(ariadne::Config::new().with_index_type(ariadne::IndexType::Byte))
-            .with_code(3)
             .with_message(format!("unknown builtin `{}`", self.name.name))
             .with_label(
                 Label::new(((), self.name.span.into_range()))
@@ -65,8 +94,6 @@ struct TypeMismatchError {
 impl TypeMismatchError {
     fn report(self, ctx: &mut Context<'_>) {
         Report::build(ReportKind::Error, ((), self.produce_expr.into_range()))
-            .with_config(ariadne::Config::new().with_index_type(ariadne::IndexType::Byte))
-            .with_code(3)
             .with_message(format!(
                 "expected type {} but got type {}",
                 self.expected, self.received
@@ -95,8 +122,6 @@ struct DivideByZeroError {
 impl DivideByZeroError {
     fn report(self, ctx: &mut Context<'_>) {
         Report::build(ReportKind::Error, ((), self.span.into_range()))
-            .with_config(ariadne::Config::new().with_index_type(ariadne::IndexType::Byte))
-            .with_code(3)
             .with_message("divide by 0 by error")
             .with_label(
                 Label::new(((), self.span.into_range()))
