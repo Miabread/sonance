@@ -6,7 +6,7 @@ use ariadne::{Color, ColorGenerator, Label, Report, ReportKind, Source};
 
 use crate::{
     DummyError,
-    type_tree::{Expr, ExprKind, Op, Statement, StatementKind, Type},
+    type_tree::{Expr, ExprKind, Op, Statement, StatementKind},
 };
 
 use error::*;
@@ -73,28 +73,12 @@ fn eval_expr<'src>(expr: &Expr<'src>, ctx: &mut Context<'src>) -> Result<Value<'
         ExprKind::Int(i) => Value::Int(*i),
         ExprKind::String(s) => Value::String(s),
         ExprKind::BinOp(op, lhs, rhs) => {
-            let lhs_value = eval_expr(lhs, ctx)?;
-            let Value::Int(lhs_value) = lhs_value else {
-                TypeMismatchError {
-                    produce_expr: lhs.span,
-                    consume_expr: expr.span,
-                    expected: Type::Int,
-                    received: lhs_value.ty(),
-                }
-                .report(ctx);
-                return Err(DummyError);
+            let Value::Int(lhs_value) = eval_expr(lhs, ctx)? else {
+                panic!("expected int value");
             };
 
-            let rhs_value = eval_expr(rhs, ctx)?;
-            let Value::Int(rhs_value) = rhs_value else {
-                TypeMismatchError {
-                    produce_expr: rhs.span,
-                    consume_expr: expr.span,
-                    expected: Type::Int,
-                    received: rhs_value.ty(),
-                }
-                .report(ctx);
-                return Err(DummyError);
+            let Value::Int(rhs_value) = eval_expr(rhs, ctx)? else {
+                panic!("expected int value");
             };
 
             Value::Int(match op {
@@ -126,16 +110,6 @@ impl Display for Value<'_> {
             Value::Unit => write!(f, "Unit"),
             Value::Int(i) => write!(f, "{i}"),
             Value::String(s) => write!(f, "{s}"),
-        }
-    }
-}
-
-impl Value<'_> {
-    fn ty(&self) -> Type {
-        match self {
-            Value::Unit => Type::Unit,
-            Value::Int(_) => Type::Int,
-            Value::String(_) => Type::String,
         }
     }
 }

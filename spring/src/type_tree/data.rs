@@ -39,6 +39,7 @@ pub enum ExprKind<'src> {
 
 #[derive(Debug, Clone)]
 pub enum Type {
+    Error,
     Unit,
     Int,
     String,
@@ -47,6 +48,7 @@ pub enum Type {
 impl Display for Type {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Type::Error => write!(f, "<error>"),
             Type::Unit => write!(f, "Unit"),
             Type::Int => write!(f, "Int"),
             Type::String => write!(f, "String"),
