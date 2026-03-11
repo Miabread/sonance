@@ -37,7 +37,7 @@ pub enum ExprKind<'src> {
     BinOp(Op, Box<Expr<'src>>, Box<Expr<'src>>),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Type {
     Error,
     Unit,

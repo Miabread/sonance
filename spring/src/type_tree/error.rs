@@ -12,6 +12,10 @@ pub struct TypeMismatchError {
 
 impl TypeMismatchError {
     pub fn report(self, ctx: &mut Context<'_>) {
+        if self.expected == Type::Error || self.received == Type::Error {
+            return;
+        }
+
         ctx.error_count += 1;
 
         Report::build(ReportKind::Error, ((), self.produce_expr.into_range()))
