@@ -1,11 +1,14 @@
 pub mod data;
 pub mod error;
 
+use std::collections::HashMap;
+
 use chumsky::span::Spanned;
 
-use crate::{parse_tree, type_tree::error::TypeMismatchError};
+use crate::{DummyError, parse_tree};
 
 pub use data::*;
+use error::*;
 
 pub struct Context<'src> {
     pub source: &'src str,
@@ -15,16 +18,19 @@ pub struct Context<'src> {
 pub fn type_statement<'src>(
     stmt: Spanned<parse_tree::Statement<'src>>,
     ctx: &mut Context<'src>,
-) -> Statement<'src> {
+) -> Result<Statement<'src>, DummyError> {
     let kind = match stmt.inner {
-        parse_tree::Statement::Expr(expr) => StatementKind::Expr(type_expr(expr, ctx)),
+        parse_tree::Statement::Expr(expr) => StatementKind::Expr(type_expr(expr, ctx)?),
         parse_tree::Statement::Macro(ident, args) => {
             let ident = Ident {
                 name: ident.inner,
                 span: ident.span,
             };
 
-            let args = args.into_iter().map(|expr| type_expr(expr, ctx)).collect();
+            let args = args
+                .into_iter()
+                .map(|expr| type_expr(expr, ctx))
+                .collect::<Result<_, _>>()?;
 
             StatementKind::Macro(ident, args)
         }
@@ -35,25 +41,63 @@ pub fn type_statement<'src>(
         StatementKind::Macro(_, _) => Type::Unit,
     };
 
-    Statement {
+    Ok(Statement {
         kind,
         ty,
         span: stmt.span,
-    }
+    })
 }
 
 pub fn type_expr<'src>(
     expr: Spanned<parse_tree::Expr<'src>>,
     ctx: &mut Context<'src>,
-) -> Expr<'src> {
+) -> Result<Expr<'src>, DummyError> {
     let kind = match expr.inner {
         parse_tree::Expr::Int(i) => ExprKind::Int(i),
         parse_tree::Expr::Float(f) => ExprKind::Float(f),
         parse_tree::Expr::String(s) => ExprKind::String(s),
-        parse_tree::Expr::BinOp(op, lhs, rhs) => {
-            let lhs = type_expr(*lhs, ctx);
-            let rhs = type_expr(*rhs, ctx);
-            ExprKind::BinOp(op, Box::new(lhs), Box::new(rhs))
+        parse_tree::Expr::BinOp { op, lhs, rhs } => {
+            let lhs = Box::new(type_expr(*lhs, ctx)?);
+            let rhs = Box::new(type_expr(*rhs, ctx)?);
+            ExprKind::BinOp { op, lhs, rhs }
+        }
+        parse_tree::Expr::Match { scrutinee, arms } => {
+            let scrutinee = Box::new(type_expr(*scrutinee, ctx)?);
+
+            let arms = arms
+                .into_iter()
+                .map(|(pat, expr)| Ok((pat, type_expr(expr, ctx)?)))
+                .collect::<Result<Vec<_>, _>>()?;
+
+            let mut has_discard = false;
+            let mut ints_covered = HashMap::with_capacity(arms.len());
+
+            for (pat, _) in &arms {
+                match pat.inner {
+                    Pattern::Int(i) => {
+                        if let Some(first_span) = ints_covered.insert(i, pat.span) {
+                            MatchOverlapError {
+                                match_span: expr.span,
+                                first_span,
+                                repeat_span: pat.span,
+                            }
+                            .report(ctx);
+                            return Err(DummyError);
+                        }
+                    }
+                    Pattern::Discard => has_discard = true,
+                }
+            }
+
+            if !has_discard {
+                MatchMissingDiscardError {
+                    match_span: expr.span,
+                }
+                .report(ctx);
+                return Err(DummyError);
+            }
+
+            ExprKind::Match { scrutinee, arms }
         }
     };
 
@@ -61,11 +105,11 @@ pub fn type_expr<'src>(
         ExprKind::Int(_) => Type::Int,
         ExprKind::Float(_) => Type::Float,
         ExprKind::String(_) => Type::String,
-        ExprKind::BinOp(_, lhs, rhs) => 'block: {
+        ExprKind::BinOp { lhs, rhs, .. } => 'block: {
             if lhs.ty != Type::Int && lhs.ty != Type::Float {
                 TypeMismatchError {
-                    produce_expr: lhs.span,
-                    consume_expr: expr.span,
+                    receive_expr: lhs.span,
+                    expected_expr: expr.span,
                     expected: vec![Type::Int, Type::Float],
                     received: lhs.ty.clone(),
                 }
@@ -75,8 +119,8 @@ pub fn type_expr<'src>(
 
             if lhs.ty != rhs.ty {
                 TypeMismatchError {
-                    produce_expr: rhs.span,
-                    consume_expr: expr.span,
+                    receive_expr: rhs.span,
+                    expected_expr: expr.span,
                     expected: vec![lhs.ty.clone()],
                     received: rhs.ty.clone(),
                 }
@@ -86,11 +130,38 @@ pub fn type_expr<'src>(
 
             Type::Int
         }
+        ExprKind::Match { scrutinee, arms } => 'block: {
+            if scrutinee.ty != Type::Int {
+                TypeMismatchError {
+                    received: scrutinee.ty.clone(),
+                    receive_expr: scrutinee.span,
+                    expected: vec![Type::Int],
+                    expected_expr: scrutinee.span,
+                }
+                .report(ctx);
+            }
+
+            let mut arms = arms.iter();
+            let first = &arms.next().unwrap().1;
+            for (_, arm) in arms {
+                if arm.ty != first.ty {
+                    TypeMismatchError {
+                        received: arm.ty.clone(),
+                        receive_expr: arm.span,
+                        expected: vec![first.ty.clone()],
+                        expected_expr: first.span,
+                    }
+                    .report(ctx);
+                    break 'block Type::Error;
+                }
+            }
+            first.ty.clone()
+        }
     };
 
-    Expr {
+    Ok(Expr {
         kind,
         ty,
         span: expr.span,
-    }
+    })
 }

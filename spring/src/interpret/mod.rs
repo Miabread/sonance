@@ -6,7 +6,7 @@ use ariadne::{Color, ColorGenerator, Label, Report, ReportKind, Source};
 
 use crate::{
     DummyError,
-    type_tree::{Expr, ExprKind, Op, Statement, StatementKind, Type},
+    type_tree::{Expr, ExprKind, Op, Pattern, Statement, StatementKind, Type},
 };
 
 use error::*;
@@ -94,7 +94,7 @@ fn eval_expr<'src>(expr: &Expr<'src>, ctx: &mut Context<'src>) -> Result<Value<'
         ExprKind::Int(i) => Value::Int(*i),
         ExprKind::Float(f) => Value::Float(*f),
         ExprKind::String(s) => Value::String(s),
-        ExprKind::BinOp(op, lhs, rhs) => match lhs.ty {
+        ExprKind::BinOp { op, lhs, rhs } => match lhs.ty {
             Type::Int => {
                 let Value::Int(lhs_value) = eval_expr(lhs, ctx)? else {
                     panic!("expected int value");
@@ -135,6 +135,26 @@ fn eval_expr<'src>(expr: &Expr<'src>, ctx: &mut Context<'src>) -> Result<Value<'
             }
             _ => panic!("bin op unsupported type"),
         },
+        ExprKind::Match { scrutinee, arms } => 'block: {
+            let Value::Int(scrutinee) = eval_expr(scrutinee, ctx)? else {
+                panic!("expected int value");
+            };
+
+            for (pat, expr) in arms {
+                match pat.inner {
+                    Pattern::Int(i) => {
+                        if scrutinee == i {
+                            break 'block eval_expr(expr, ctx)?;
+                        }
+                    }
+                    Pattern::Discard => {
+                        break 'block eval_expr(expr, ctx)?;
+                    }
+                }
+            }
+
+            panic!("hit end of match");
+        }
     })
 }
 

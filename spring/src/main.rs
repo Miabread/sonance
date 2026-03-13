@@ -23,6 +23,6 @@ fn main() {
     let mut ctx = interpret::Context { source: &src };
 
     for stmt in type_tree {
-        interpret::eval_stmt(&stmt, &mut ctx).unwrap();
+        interpret::eval_stmt(&stmt.unwrap(), &mut ctx).unwrap();
     }
 }

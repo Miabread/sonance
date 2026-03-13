@@ -11,7 +11,15 @@ pub enum Expr<'src> {
     Int(u64),
     Float(f64),
     String(&'src str),
-    BinOp(Op, Box<Spanned<Expr<'src>>>, Box<Spanned<Expr<'src>>>),
+    BinOp {
+        op: Op,
+        lhs: Box<Spanned<Expr<'src>>>,
+        rhs: Box<Spanned<Expr<'src>>>,
+    },
+    Match {
+        scrutinee: Box<Spanned<Expr<'src>>>,
+        arms: Vec<(Spanned<Pattern>, Spanned<Expr<'src>>)>,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -20,4 +28,10 @@ pub enum Op {
     Sub,
     Mul,
     Div,
+}
+
+#[derive(Debug, Clone)]
+pub enum Pattern {
+    Int(u64),
+    Discard,
 }

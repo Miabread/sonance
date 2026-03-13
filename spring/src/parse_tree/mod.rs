@@ -95,9 +95,28 @@ where
         }
         .spanned();
 
-        let paren = expr.delimited_by(just(Token::OpenParen), just(Token::CloseParen));
+        let paren = expr
+            .clone()
+            .delimited_by(just(Token::OpenParen), just(Token::CloseParen));
 
-        let atom = literal.or(paren);
+        let match_e = just(Token::Match)
+            .ignore_then(paren.clone())
+            .then(
+                pattern()
+                    .then_ignore(just(Token::Arrow))
+                    .then(expr)
+                    .separated_by(just(Token::Comma))
+                    .allow_trailing()
+                    .collect()
+                    .delimited_by(just(Token::OpenBrace), just(Token::CloseBrace)),
+            )
+            .map(|(scrutinee, arms)| Expr::Match {
+                scrutinee: Box::new(scrutinee),
+                arms,
+            })
+            .spanned();
+
+        let atom = literal.or(paren).or(match_e);
 
         let product = atom.clone().foldl_with(
             choice((
@@ -107,7 +126,12 @@ where
             .then(atom)
             .repeated(),
             |lhs, (op, rhs), ctx| {
-                Expr::BinOp(op, Box::new(lhs), Box::new(rhs)).with_span(ctx.span())
+                Expr::BinOp {
+                    op,
+                    lhs: Box::new(lhs),
+                    rhs: Box::new(rhs),
+                }
+                .with_span(ctx.span())
             },
         );
 
@@ -119,8 +143,25 @@ where
             .then(product)
             .repeated(),
             |lhs, (op, rhs), ctx| {
-                Expr::BinOp(op, Box::new(lhs), Box::new(rhs)).with_span(ctx.span())
+                Expr::BinOp {
+                    op,
+                    lhs: Box::new(lhs),
+                    rhs: Box::new(rhs),
+                }
+                .with_span(ctx.span())
             },
         )
     })
+}
+
+pub fn pattern<'tokens, 'src: 'tokens, I>()
+-> impl Parser<'tokens, I, Spanned<Pattern>, extra::Err<Rich<'tokens, Token<'src>>>> + Clone
+where
+    I: ValueInput<'tokens, Token = Token<'src>, Span = SimpleSpan>,
+{
+    select! {
+        Token::Int(i) => Pattern::Int(i),
+        Token::Underscore => Pattern::Discard,
+    }
+    .spanned()
 }

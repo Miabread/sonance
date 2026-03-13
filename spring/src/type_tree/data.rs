@@ -1,8 +1,8 @@
 use std::fmt::Display;
 
-use chumsky::span::SimpleSpan;
+use chumsky::span::{SimpleSpan, Spanned};
 
-pub use crate::parse_tree::Op;
+pub use crate::parse_tree::{Op, Pattern};
 
 #[derive(Debug, Clone)]
 pub struct Ident<'src> {
@@ -35,7 +35,15 @@ pub enum ExprKind<'src> {
     Int(u64),
     Float(f64),
     String(&'src str),
-    BinOp(Op, Box<Expr<'src>>, Box<Expr<'src>>),
+    BinOp {
+        op: Op,
+        lhs: Box<Expr<'src>>,
+        rhs: Box<Expr<'src>>,
+    },
+    Match {
+        scrutinee: Box<Expr<'src>>,
+        arms: Vec<(Spanned<Pattern>, Expr<'src>)>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq)]
