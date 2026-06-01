@@ -9,8 +9,13 @@ pub struct Module<'src> {
 pub enum Item<'src> {
     Func {
         name: Spanned<&'src str>,
-        body: Vec<Spanned<Statement<'src>>>,
+        body: Spanned<Block<'src>>,
     },
+}
+
+#[derive(Debug, Clone)]
+pub struct Block<'src> {
+    pub body: Vec<Spanned<Statement<'src>>>,
 }
 
 #[derive(Debug, Clone)]

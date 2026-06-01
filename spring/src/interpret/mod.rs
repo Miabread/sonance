@@ -6,7 +6,9 @@ use ariadne::{Color, ColorGenerator, Label, Report, ReportKind, Source};
 
 use crate::{
     DummyError,
-    type_tree::{Expr, ExprKind, ItemKind, Module, Op, Pattern, Statement, StatementKind, Type},
+    type_tree::{
+        Block, Expr, ExprKind, ItemKind, Module, Op, Pattern, Statement, StatementKind, Type,
+    },
 };
 
 use error::*;
@@ -33,9 +35,16 @@ pub fn eval_module<'src>(
         })
         .expect("meow");
 
+    eval_block(body, ctx)
+}
+
+pub fn eval_block<'src>(
+    block: &Block<'src>,
+    ctx: &mut Context<'src>,
+) -> Result<Value<'src>, DummyError> {
     let mut output = None;
 
-    for stmt in body {
+    for stmt in &block.body {
         output = Some(eval_stmt(stmt, ctx)?);
     }
 

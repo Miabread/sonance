@@ -20,8 +20,14 @@ pub struct Item<'src> {
 pub enum ItemKind<'src> {
     Func {
         name: Ident<'src>,
-        body: Vec<Statement<'src>>,
+        body: Block<'src>,
     },
+}
+
+#[derive(Debug, Clone)]
+pub struct Block<'src> {
+    pub body: Vec<Statement<'src>>,
+    pub span: SimpleSpan,
 }
 
 #[derive(Debug, Clone)]

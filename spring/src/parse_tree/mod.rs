@@ -72,15 +72,27 @@ where
         .ignore_then(select! { Token::Ident(i) => i}.spanned())
         .then_ignore(just(Token::OpenParen))
         .then_ignore(just(Token::CloseParen))
-        .then_ignore(just(Token::OpenBrace))
-        .then(statements())
-        .then_ignore(just(Token::CloseBrace))
+        .then(block())
         .map(|(name, body)| Item::Func { name, body })
         .spanned()
 }
 
-pub fn statements<'tokens, 'src: 'tokens, I>()
--> impl Parser<'tokens, I, Vec<Spanned<Statement<'src>>>, extra::Err<Rich<'tokens, Token<'src>>>>
+pub fn block<'tokens, 'src: 'tokens, I>()
+-> impl Parser<'tokens, I, Spanned<Block<'src>>, extra::Err<Rich<'tokens, Token<'src>>>>
+where
+    I: ValueInput<'tokens, Token = Token<'src>, Span = SimpleSpan>,
+{
+    statement()
+        .separated_by(just(Token::Semi))
+        .allow_trailing()
+        .collect()
+        .delimited_by(just(Token::OpenBrace), just(Token::CloseBrace))
+        .map(|statements| Block { body: statements })
+        .spanned()
+}
+
+pub fn statement<'tokens, 'src: 'tokens, I>()
+-> impl Parser<'tokens, I, Spanned<Statement<'src>>, extra::Err<Rich<'tokens, Token<'src>>>>
 where
     I: ValueInput<'tokens, Token = Token<'src>, Span = SimpleSpan>,
 {
@@ -98,13 +110,7 @@ where
     )
     .map(|(name, args)| Statement::Macro(name, args));
 
-    expr()
-        .map(Statement::Expr)
-        .or(macro_call)
-        .spanned()
-        .separated_by(just(Token::Semi))
-        .allow_trailing()
-        .collect()
+    expr().map(Statement::Expr).or(macro_call).spanned()
 }
 
 pub fn expr<'tokens, 'src: 'tokens, I>()

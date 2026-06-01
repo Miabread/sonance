@@ -40,18 +40,34 @@ pub fn type_item<'src>(
     Ok(match item.inner {
         parse_tree::Item::Func { name, body } => Item {
             kind: ItemKind::Func {
-                name: Ident {
-                    name: name.inner,
-                    span: name.span,
-                },
-                body: body
-                    .into_iter()
-                    .map(|stmt| type_statement(stmt, ctx))
-                    .collect::<Result<_, _>>()?,
+                name: type_ident(name),
+                body: type_block(body, ctx)?,
             },
             span: item.span,
         },
     })
+}
+
+pub fn type_block<'src>(
+    block: Spanned<parse_tree::Block<'src>>,
+    ctx: &mut Context<'src>,
+) -> Result<Block<'src>, DummyError> {
+    Ok(Block {
+        body: block
+            .inner
+            .body
+            .into_iter()
+            .map(|stmt| type_statement(stmt, ctx))
+            .collect::<Result<_, _>>()?,
+        span: block.span,
+    })
+}
+
+pub fn type_ident<'src>(ident: Spanned<&'src str>) -> Ident<'src> {
+    Ident {
+        name: ident.inner,
+        span: ident.span,
+    }
 }
 
 pub fn type_statement<'src>(
@@ -61,10 +77,7 @@ pub fn type_statement<'src>(
     let kind = match stmt.inner {
         parse_tree::Statement::Expr(expr) => StatementKind::Expr(type_expr(expr, ctx)?),
         parse_tree::Statement::Macro(ident, args) => {
-            let ident = Ident {
-                name: ident.inner,
-                span: ident.span,
-            };
+            let ident = type_ident(ident);
 
             let args = args
                 .into_iter()
