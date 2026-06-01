@@ -12,7 +12,7 @@ use crate::{DummyError, parse_tree::token::Token};
 
 pub use data::*;
 
-pub fn parse(src: &'_ str) -> Result<Vec<Spanned<Statement<'_>>>, DummyError> {
+pub fn parse(src: &'_ str) -> Result<Spanned<Module<'_>>, DummyError> {
     // Create a logos lexer over the source code
     let token_iter = Token::lexer(src)
         .spanned()
@@ -32,26 +32,51 @@ pub fn parse(src: &'_ str) -> Result<Vec<Spanned<Statement<'_>>>, DummyError> {
 
     // Parse the token stream with our chumsky parser
     // If parsing was unsuccessful, generate a nice user-friendly diagnostic with ariadne
-    statements()
-        .parse(token_stream)
-        .into_result()
-        .map_err(|errs| {
-            for err in errs {
-                Report::build(ReportKind::Error, ((), err.span().into_range()))
-                    .with_config(ariadne::Config::new().with_index_type(ariadne::IndexType::Byte))
-                    .with_code(3)
-                    .with_message(err.to_string())
-                    .with_label(
-                        Label::new(((), err.span().into_range()))
-                            .with_message(err.reason().to_string())
-                            .with_color(Color::Red),
-                    )
-                    .finish()
-                    .eprint(Source::from(src))
-                    .unwrap();
-            }
-            DummyError
-        })
+    module().parse(token_stream).into_result().map_err(|errs| {
+        for err in errs {
+            Report::build(ReportKind::Error, ((), err.span().into_range()))
+                .with_config(ariadne::Config::new().with_index_type(ariadne::IndexType::Byte))
+                .with_code(3)
+                .with_message(err.to_string())
+                .with_label(
+                    Label::new(((), err.span().into_range()))
+                        .with_message(err.reason().to_string())
+                        .with_color(Color::Red),
+                )
+                .finish()
+                .eprint(Source::from(src))
+                .unwrap();
+        }
+        DummyError
+    })
+}
+
+pub fn module<'tokens, 'src: 'tokens, I>()
+-> impl Parser<'tokens, I, Spanned<Module<'src>>, extra::Err<Rich<'tokens, Token<'src>>>>
+where
+    I: ValueInput<'tokens, Token = Token<'src>, Span = SimpleSpan>,
+{
+    item()
+        .repeated()
+        .collect()
+        .map(|items| Module { items })
+        .spanned()
+}
+
+pub fn item<'tokens, 'src: 'tokens, I>()
+-> impl Parser<'tokens, I, Spanned<Item<'src>>, extra::Err<Rich<'tokens, Token<'src>>>>
+where
+    I: ValueInput<'tokens, Token = Token<'src>, Span = SimpleSpan>,
+{
+    just(Token::Func)
+        .ignore_then(select! { Token::Ident(i) => i}.spanned())
+        .then_ignore(just(Token::OpenParen))
+        .then_ignore(just(Token::CloseParen))
+        .then_ignore(just(Token::OpenBrace))
+        .then(statements())
+        .then_ignore(just(Token::CloseBrace))
+        .map(|(name, body)| Item::Func { name, body })
+        .spanned()
 }
 
 pub fn statements<'tokens, 'src: 'tokens, I>()

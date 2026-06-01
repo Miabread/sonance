@@ -1,5 +1,7 @@
-print!(match(2) {
-    1 -> "foo",
-    2 -> "bar",
-    _ -> "baz",
-});
+func main() {
+    print!(match(2) {
+        1 -> "foo",
+        2 -> "bar",
+        _ -> "baz",
+    });
+}

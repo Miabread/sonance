@@ -1,6 +1,19 @@
 use chumsky::span::Spanned;
 
 #[derive(Debug, Clone)]
+pub struct Module<'src> {
+    pub items: Vec<Spanned<Item<'src>>>,
+}
+
+#[derive(Debug, Clone)]
+pub enum Item<'src> {
+    Func {
+        name: Spanned<&'src str>,
+        body: Vec<Spanned<Statement<'src>>>,
+    },
+}
+
+#[derive(Debug, Clone)]
 pub enum Statement<'src> {
     Expr(Spanned<Expr<'src>>),
     Macro(Spanned<&'src str>, Vec<Spanned<Expr<'src>>>),

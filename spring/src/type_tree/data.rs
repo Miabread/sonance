@@ -5,6 +5,26 @@ use chumsky::span::{SimpleSpan, Spanned};
 pub use crate::parse_tree::{Op, Pattern};
 
 #[derive(Debug, Clone)]
+pub struct Module<'src> {
+    pub items: Vec<Item<'src>>,
+    pub span: SimpleSpan,
+}
+
+#[derive(Debug, Clone)]
+pub struct Item<'src> {
+    pub kind: ItemKind<'src>,
+    pub span: SimpleSpan,
+}
+
+#[derive(Debug, Clone)]
+pub enum ItemKind<'src> {
+    Func {
+        name: Ident<'src>,
+        body: Vec<Statement<'src>>,
+    },
+}
+
+#[derive(Debug, Clone)]
 pub struct Ident<'src> {
     pub name: &'src str,
     pub span: SimpleSpan,

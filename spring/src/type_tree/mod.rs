@@ -5,7 +5,10 @@ use std::collections::HashMap;
 
 use chumsky::span::Spanned;
 
-use crate::{DummyError, parse_tree};
+use crate::{
+    DummyError,
+    parse_tree::{self},
+};
 
 pub use data::*;
 use error::*;
@@ -13,6 +16,42 @@ use error::*;
 pub struct Context<'src> {
     pub source: &'src str,
     pub error_count: u64,
+}
+
+pub fn type_module<'src>(
+    module: Spanned<parse_tree::Module<'src>>,
+    ctx: &mut Context<'src>,
+) -> Result<Module<'src>, DummyError> {
+    let span = module.span;
+    let items = module
+        .inner
+        .items
+        .into_iter()
+        .map(|item| type_item(item, ctx))
+        .collect::<Result<_, _>>()?;
+
+    Ok(Module { items, span })
+}
+
+pub fn type_item<'src>(
+    item: Spanned<parse_tree::Item<'src>>,
+    ctx: &mut Context<'src>,
+) -> Result<Item<'src>, DummyError> {
+    Ok(match item.inner {
+        parse_tree::Item::Func { name, body } => Item {
+            kind: ItemKind::Func {
+                name: Ident {
+                    name: name.inner,
+                    span: name.span,
+                },
+                body: body
+                    .into_iter()
+                    .map(|stmt| type_statement(stmt, ctx))
+                    .collect::<Result<_, _>>()?,
+            },
+            span: item.span,
+        },
+    })
 }
 
 pub fn type_statement<'src>(

@@ -6,13 +6,40 @@ use ariadne::{Color, ColorGenerator, Label, Report, ReportKind, Source};
 
 use crate::{
     DummyError,
-    type_tree::{Expr, ExprKind, Op, Pattern, Statement, StatementKind, Type},
+    type_tree::{Expr, ExprKind, ItemKind, Module, Op, Pattern, Statement, StatementKind, Type},
 };
 
 use error::*;
 
 pub struct Context<'src> {
     pub source: &'src str,
+}
+
+pub fn eval_module<'src>(
+    module: &Module<'src>,
+    ctx: &mut Context<'src>,
+) -> Result<Value<'src>, DummyError> {
+    let body = module
+        .items
+        .iter()
+        .find_map(|item| {
+            if let ItemKind::Func { name, body } = &item.kind
+                && name.name == "main"
+            {
+                Some(body)
+            } else {
+                None
+            }
+        })
+        .expect("meow");
+
+    let mut output = None;
+
+    for stmt in body {
+        output = Some(eval_stmt(stmt, ctx)?);
+    }
+
+    Ok(output.unwrap_or(Value::Unit))
 }
 
 pub fn eval_stmt<'src>(

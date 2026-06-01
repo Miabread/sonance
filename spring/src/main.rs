@@ -11,10 +11,7 @@ fn main() {
         error_count: 0,
     };
 
-    let type_tree: Vec<_> = parse_tree
-        .into_iter()
-        .map(|stmt| type_tree::type_statement(stmt, &mut ctx))
-        .collect();
+    let type_tree = type_tree::type_module(parse_tree, &mut ctx);
 
     if ctx.error_count > 0 {
         return;
@@ -22,7 +19,5 @@ fn main() {
 
     let mut ctx = interpret::Context { source: &src };
 
-    for stmt in type_tree {
-        interpret::eval_stmt(&stmt.unwrap(), &mut ctx).unwrap();
-    }
+    interpret::eval_module(&type_tree.unwrap(), &mut ctx).unwrap();
 }
