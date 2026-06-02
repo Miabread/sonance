@@ -51,6 +51,8 @@ pub enum Token<'src> {
     Semi,
     #[token(",")]
     Comma,
+    #[token(".")]
+    Dot,
     #[token("_", priority = 999)]
     Underscore,
 
@@ -85,6 +87,7 @@ impl Display for Token<'_> {
             Token::Bang => write!(f, "!"),
             Token::Semi => write!(f, ";"),
             Token::Comma => write!(f, ","),
+            Token::Dot => write!(f, "."),
             Token::Underscore => write!(f, "_"),
             Token::Func => write!(f, "func"),
             Token::TInt => write!(f, "int"),

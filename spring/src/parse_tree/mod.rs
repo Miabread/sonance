@@ -4,6 +4,7 @@ pub mod token;
 use ariadne::{Color, Label, Report, ReportKind, Source};
 use chumsky::{
     input::{Stream, ValueInput},
+    pratt::*,
     prelude::*,
 };
 use logos::Logos;
@@ -130,58 +131,72 @@ where
             .clone()
             .delimited_by(just(Token::OpenParen), just(Token::CloseParen));
 
-        let match_e = just(Token::Match)
+        let match_body = pattern()
+            .then_ignore(just(Token::Arrow))
+            .then(expr.clone())
+            .separated_by(just(Token::Comma))
+            .allow_trailing()
+            .collect()
+            .delimited_by(just(Token::OpenBrace), just(Token::CloseBrace));
+
+        let match_atom = just(Token::Match)
             .ignore_then(paren.clone())
-            .then(
-                pattern()
-                    .then_ignore(just(Token::Arrow))
-                    .then(expr)
-                    .separated_by(just(Token::Comma))
-                    .allow_trailing()
-                    .collect()
-                    .delimited_by(just(Token::OpenBrace), just(Token::CloseBrace)),
-            )
+            .then(match_body.clone())
             .map(|(scrutinee, arms)| Expr::Match {
                 scrutinee: Box::new(scrutinee),
                 arms,
             })
             .spanned();
 
-        let atom = literal.or(paren).or(match_e);
+        let atom = literal.or(paren).or(match_atom);
 
-        let product = atom.clone().foldl_with(
-            choice((
-                just(Token::Mul).to(Op::Mul), //
-                just(Token::Div).to(Op::Div),
-            ))
-            .then(atom)
-            .repeated(),
-            |lhs, (op, rhs), ctx| {
+        atom.pratt((
+            postfix(
+                3,
+                just(Token::Dot)
+                    .then(just(Token::Match))
+                    .ignore_then(match_body.clone()),
+                |scrutinee, arms, ctx| {
+                    Expr::Match {
+                        scrutinee: Box::new(scrutinee),
+                        arms,
+                    }
+                    .with_span(ctx.span())
+                },
+            ),
+            infix(left(2), just(Token::Mul), |lhs, _, rhs, ctx| {
                 Expr::BinOp {
-                    op,
+                    op: Op::Mul,
                     lhs: Box::new(lhs),
                     rhs: Box::new(rhs),
                 }
                 .with_span(ctx.span())
-            },
-        );
-
-        product.clone().foldl_with(
-            choice((
-                just(Token::Add).to(Op::Add), //
-                just(Token::Sub).to(Op::Sub),
-            ))
-            .then(product)
-            .repeated(),
-            |lhs, (op, rhs), ctx| {
+            }),
+            infix(left(2), just(Token::Div), |lhs, _, rhs, ctx| {
                 Expr::BinOp {
-                    op,
+                    op: Op::Div,
                     lhs: Box::new(lhs),
                     rhs: Box::new(rhs),
                 }
                 .with_span(ctx.span())
-            },
-        )
+            }),
+            infix(left(1), just(Token::Add), |lhs, _, rhs, ctx| {
+                Expr::BinOp {
+                    op: Op::Add,
+                    lhs: Box::new(lhs),
+                    rhs: Box::new(rhs),
+                }
+                .with_span(ctx.span())
+            }),
+            infix(left(1), just(Token::Sub), |lhs, _, rhs, ctx| {
+                Expr::BinOp {
+                    op: Op::Sub,
+                    lhs: Box::new(lhs),
+                    rhs: Box::new(rhs),
+                }
+                .with_span(ctx.span())
+            }),
+        ))
     })
 }
 
