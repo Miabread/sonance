@@ -134,20 +134,21 @@ where
             })
             .spanned();
 
+        let args = expr
+            .separated_by(just(Token::Comma))
+            .allow_trailing()
+            .collect()
+            .delimited_by(just(Token::OpenParen), just(Token::CloseParen));
+
         let macro_start = select! {
             Token::Ident(i) => i,
         }
         .spanned()
-        .then_ignore(just(Token::Bang))
-        .then(
-            expr.separated_by(just(Token::Comma))
-                .allow_trailing()
-                .collect()
-                .delimited_by(just(Token::OpenParen), just(Token::CloseParen)),
-        );
+        .then_ignore(just(Token::Bang));
 
         let macro_atom = macro_start
             .clone()
+            .then(args.clone())
             .map(|(name, args)| Expr::Macro { name, args })
             .spanned();
 
@@ -169,8 +170,11 @@ where
             ),
             postfix(
                 3,
-                just(Token::Dot).ignore_then(macro_start),
-                |first_arg, (name, mut args): (_, Vec<_>), ctx| {
+                just(Token::Dot)
+                    .ignore_then(macro_start)
+                    .then(args.repeated().at_most(1).collect()),
+                |first_arg, (name, test): (_, Vec<_>), ctx| {
+                    let mut args: Vec<_> = test.into_iter().next().unwrap_or_default();
                     args.insert(0, first_arg);
                     Expr::Macro { name, args }.with_span(ctx.span())
                 },
