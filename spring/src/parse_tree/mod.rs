@@ -134,7 +134,7 @@ where
             })
             .spanned();
 
-        let macro_call = select! {
+        let macro_start = select! {
             Token::Ident(i) => i,
         }
         .spanned()
@@ -144,11 +144,14 @@ where
                 .allow_trailing()
                 .collect()
                 .delimited_by(just(Token::OpenParen), just(Token::CloseParen)),
-        )
-        .map(|(name, args)| Expr::Macro { name, args })
-        .spanned();
+        );
 
-        let atom = literal.or(paren).or(match_atom).or(macro_call);
+        let macro_atom = macro_start
+            .clone()
+            .map(|(name, args)| Expr::Macro { name, args })
+            .spanned();
+
+        let atom = literal.or(paren).or(match_atom).or(macro_atom);
 
         atom.pratt((
             postfix(
@@ -162,6 +165,14 @@ where
                         arms,
                     }
                     .with_span(ctx.span())
+                },
+            ),
+            postfix(
+                3,
+                just(Token::Dot).ignore_then(macro_start),
+                |first_arg, (name, mut args): (_, Vec<_>), ctx| {
+                    args.insert(0, first_arg);
+                    Expr::Macro { name, args }.with_span(ctx.span())
                 },
             ),
             infix(left(2), just(Token::Mul), |lhs, _, rhs, ctx| {

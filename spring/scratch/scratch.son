@@ -1,7 +1,9 @@
 func main() {
-    print!(2.match {
+    2
+    .match {
         1 -> "foo",
         2 -> "bar",
         _ -> "baz",
-    });
+    }
+    .print!();
 }
