@@ -21,7 +21,6 @@ pub struct Block<'src> {
 #[derive(Debug, Clone)]
 pub enum Statement<'src> {
     Expr(Spanned<Expr<'src>>),
-    Macro(Spanned<&'src str>, Vec<Spanned<Expr<'src>>>),
 }
 
 #[derive(Debug, Clone)]
@@ -37,6 +36,10 @@ pub enum Expr<'src> {
     Match {
         scrutinee: Box<Spanned<Expr<'src>>>,
         arms: Vec<(Spanned<Pattern>, Spanned<Expr<'src>>)>,
+    },
+    Macro {
+        name: Spanned<&'src str>,
+        args: Vec<Spanned<Expr<'src>>>,
     },
 }
 

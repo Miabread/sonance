@@ -97,21 +97,7 @@ pub fn statement<'tokens, 'src: 'tokens, I>()
 where
     I: ValueInput<'tokens, Token = Token<'src>, Span = SimpleSpan>,
 {
-    let macro_call = select! {
-        Token::Ident(i) => i,
-    }
-    .spanned()
-    .then_ignore(just(Token::Bang))
-    .then(
-        expr()
-            .separated_by(just(Token::Comma))
-            .allow_trailing()
-            .collect()
-            .delimited_by(just(Token::OpenParen), just(Token::CloseParen)),
-    )
-    .map(|(name, args)| Statement::Macro(name, args));
-
-    expr().map(Statement::Expr).or(macro_call).spanned()
+    expr().map(Statement::Expr).spanned()
 }
 
 pub fn expr<'tokens, 'src: 'tokens, I>()
@@ -148,7 +134,21 @@ where
             })
             .spanned();
 
-        let atom = literal.or(paren).or(match_atom);
+        let macro_call = select! {
+            Token::Ident(i) => i,
+        }
+        .spanned()
+        .then_ignore(just(Token::Bang))
+        .then(
+            expr.separated_by(just(Token::Comma))
+                .allow_trailing()
+                .collect()
+                .delimited_by(just(Token::OpenParen), just(Token::CloseParen)),
+        )
+        .map(|(name, args)| Expr::Macro { name, args })
+        .spanned();
+
+        let atom = literal.or(paren).or(match_atom).or(macro_call);
 
         atom.pratt((
             postfix(

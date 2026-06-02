@@ -7,7 +7,7 @@ use ariadne::{Color, ColorGenerator, Label, Report, ReportKind, Source};
 use crate::{
     DummyError,
     type_tree::{
-        Block, Expr, ExprKind, ItemKind, Module, Op, Pattern, Statement, StatementKind, Type,
+        Block, Expr, ExprKind, Ident, ItemKind, Module, Op, Pattern, Statement, StatementKind, Type,
     },
 };
 
@@ -57,71 +57,6 @@ pub fn eval_stmt<'src>(
 ) -> Result<Value<'src>, DummyError> {
     match &stmt.kind {
         StatementKind::Expr(expr) => eval_expr(expr, ctx),
-        StatementKind::Macro(name, exprs) => match name.name {
-            "print" => {
-                let exprs = exprs
-                    .iter()
-                    .map(|expr| eval_expr(expr, ctx))
-                    .collect::<Result<Vec<_>, DummyError>>()?;
-
-                for expr in exprs {
-                    print!("{}", expr);
-                }
-
-                println!();
-                Ok(Value::Unit)
-            }
-
-            "dbg" => {
-                let mut colors = ColorGenerator::new();
-
-                let exprs = exprs
-                    .iter()
-                    .map(|expr| {
-                        Ok(Label::new(((), expr.span.into_range()))
-                            .with_message(format!("{}", eval_expr(expr, ctx)?))
-                            .with_color(colors.next()))
-                    })
-                    .collect::<Result<Vec<_>, DummyError>>()?;
-
-                Report::build(
-                    ReportKind::Custom("Debug", Color::Blue),
-                    ((), stmt.span.into_range()),
-                )
-                .with_labels(exprs)
-                .finish()
-                .eprint(Source::from(ctx.source))
-                .unwrap();
-
-                Ok(Value::Unit)
-            }
-
-            "ty" => {
-                let mut colors = ColorGenerator::new();
-
-                let exprs = exprs.iter().map(|expr| {
-                    Label::new(((), expr.span.into_range()))
-                        .with_message(format!("{}", expr.ty))
-                        .with_color(colors.next())
-                });
-
-                Report::build(
-                    ReportKind::Custom("Debug Types", Color::Blue),
-                    ((), stmt.span.into_range()),
-                )
-                .with_labels(exprs)
-                .finish()
-                .eprint(Source::from(ctx.source))
-                .unwrap();
-
-                Ok(Value::Unit)
-            }
-
-            _ => {
-                UnknownBuiltinError { name: name.clone() }.report(ctx);
-                Err(DummyError)
-            }
-        },
     }
 }
 
@@ -191,7 +126,81 @@ fn eval_expr<'src>(expr: &Expr<'src>, ctx: &mut Context<'src>) -> Result<Value<'
 
             panic!("hit end of match");
         }
+        ExprKind::Macro { name, args } => return eval_macro(expr, ctx, name, args),
     })
+}
+
+fn eval_macro<'src>(
+    expr: &Expr<'src>,
+    ctx: &mut Context<'src>,
+    name: &'_ Ident,
+    args: &'_ Vec<Expr<'src>>,
+) -> Result<Value<'src>, DummyError> {
+    match name.name {
+        "print" => {
+            let args = args
+                .iter()
+                .map(|expr| eval_expr(expr, ctx))
+                .collect::<Result<Vec<_>, DummyError>>()?;
+
+            for arg in args {
+                print!("{}", arg);
+            }
+
+            println!();
+            Ok(Value::Unit)
+        }
+
+        "dbg" => {
+            let mut colors = ColorGenerator::new();
+
+            let args = args
+                .iter()
+                .map(|expr| {
+                    Ok(Label::new(((), expr.span.into_range()))
+                        .with_message(format!("{}", eval_expr(expr, ctx)?))
+                        .with_color(colors.next()))
+                })
+                .collect::<Result<Vec<_>, DummyError>>()?;
+
+            Report::build(
+                ReportKind::Custom("Debug", Color::Blue),
+                ((), expr.span.into_range()),
+            )
+            .with_labels(args)
+            .finish()
+            .eprint(Source::from(ctx.source))
+            .unwrap();
+
+            Ok(Value::Unit)
+        }
+
+        "ty" => {
+            let mut colors = ColorGenerator::new();
+
+            let args = args.iter().map(|expr| {
+                Label::new(((), expr.span.into_range()))
+                    .with_message(format!("{}", expr.ty))
+                    .with_color(colors.next())
+            });
+
+            Report::build(
+                ReportKind::Custom("Debug Types", Color::Blue),
+                ((), expr.span.into_range()),
+            )
+            .with_labels(args)
+            .finish()
+            .eprint(Source::from(ctx.source))
+            .unwrap();
+
+            Ok(Value::Unit)
+        }
+
+        _ => {
+            UnknownBuiltinError { name: name.clone() }.report(ctx);
+            Err(DummyError)
+        }
+    }
 }
 
 #[derive(Debug, Clone)]

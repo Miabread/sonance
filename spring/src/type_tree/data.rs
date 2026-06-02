@@ -46,7 +46,6 @@ pub struct Statement<'src> {
 #[derive(Debug, Clone)]
 pub enum StatementKind<'src> {
     Expr(Expr<'src>),
-    Macro(Ident<'src>, Vec<Expr<'src>>),
 }
 
 #[derive(Debug, Clone)]
@@ -69,6 +68,10 @@ pub enum ExprKind<'src> {
     Match {
         scrutinee: Box<Expr<'src>>,
         arms: Vec<(Spanned<Pattern>, Expr<'src>)>,
+    },
+    Macro {
+        name: Ident<'src>,
+        args: Vec<Expr<'src>>,
     },
 }
 

@@ -76,21 +76,10 @@ pub fn type_statement<'src>(
 ) -> Result<Statement<'src>, DummyError> {
     let kind = match stmt.inner {
         parse_tree::Statement::Expr(expr) => StatementKind::Expr(type_expr(expr, ctx)?),
-        parse_tree::Statement::Macro(ident, args) => {
-            let ident = type_ident(ident);
-
-            let args = args
-                .into_iter()
-                .map(|expr| type_expr(expr, ctx))
-                .collect::<Result<_, _>>()?;
-
-            StatementKind::Macro(ident, args)
-        }
     };
 
     let ty = match &kind {
         StatementKind::Expr(expr) => expr.ty.clone(),
-        StatementKind::Macro(_, _) => Type::Unit,
     };
 
     Ok(Statement {
@@ -151,6 +140,17 @@ pub fn type_expr<'src>(
 
             ExprKind::Match { scrutinee, arms }
         }
+
+        parse_tree::Expr::Macro { name, args } => {
+            let name = type_ident(name);
+
+            let args = args
+                .into_iter()
+                .map(|expr| type_expr(expr, ctx))
+                .collect::<Result<_, _>>()?;
+
+            ExprKind::Macro { name, args }
+        }
     };
 
     let ty = match &kind {
@@ -209,6 +209,7 @@ pub fn type_expr<'src>(
             }
             first.ty.clone()
         }
+        ExprKind::Macro { .. } => Type::Unit,
     };
 
     Ok(Expr {
