@@ -15,6 +15,16 @@ use error::*;
 
 pub struct Context<'src> {
     pub source: &'src str,
+    pub test_output: Vec<Value<'src>>,
+}
+
+impl<'src> Context<'src> {
+    pub fn new(source: &'src str) -> Self {
+        Self {
+            source,
+            test_output: vec![],
+        }
+    }
 }
 
 pub fn eval_module<'src>(
@@ -192,6 +202,17 @@ fn eval_macro<'src>(
             .finish()
             .eprint(Source::from(ctx.source))
             .unwrap();
+
+            Ok(Value::Unit)
+        }
+
+        "output" => {
+            let args = args
+                .iter()
+                .map(|expr| eval_expr(expr, ctx))
+                .collect::<Result<Vec<_>, DummyError>>()?;
+
+            ctx.test_output.extend(args);
 
             Ok(Value::Unit)
         }

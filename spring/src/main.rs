@@ -17,7 +17,11 @@ fn main() {
         return;
     }
 
-    let mut ctx = interpret::Context { source: &src };
+    let mut ctx = interpret::Context::new(&src);
 
     interpret::eval_module(&type_tree.unwrap(), &mut ctx).unwrap();
+
+    if !ctx.test_output.is_empty() {
+        dbg!(ctx.test_output);
+    }
 }
