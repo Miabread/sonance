@@ -56,32 +56,24 @@ impl TypeError {
                             .with_message(format!("expected type {} here", expected))
                             .with_color(Color::Blue),
                     )
-                    .finish()
-                    .eprint(Source::from(ctx.src))
-                    .unwrap();
             }
 
             TypeError::MatchOverlapError {
                 match_span,
                 first_span,
                 repeat_span,
-            } => {
-                Report::build(ReportKind::Error, ((), match_span.into_range()))
-                    .with_message("pattern overlaps")
-                    .with_label(
-                        Label::new(((), first_span.into_range()))
-                            .with_message("pattern first used here")
-                            .with_color(Color::Blue),
-                    )
-                    .with_label(
-                        Label::new(((), repeat_span.into_range()))
-                            .with_message("patten repeated here")
-                            .with_color(Color::Red),
-                    )
-                    .finish()
-                    .eprint(Source::from(ctx.src))
-                    .unwrap();
-            }
+            } => Report::build(ReportKind::Error, ((), match_span.into_range()))
+                .with_message("pattern overlaps")
+                .with_label(
+                    Label::new(((), first_span.into_range()))
+                        .with_message("pattern first used here")
+                        .with_color(Color::Blue),
+                )
+                .with_label(
+                    Label::new(((), repeat_span.into_range()))
+                        .with_message("patten repeated here")
+                        .with_color(Color::Red),
+                ),
 
             TypeError::MatchMissingDiscardError { match_span } => {
                 Report::build(ReportKind::Error, ((), match_span.into_range()))
@@ -91,10 +83,10 @@ impl TypeError {
                             .with_message("`match` expression here")
                             .with_color(Color::Red),
                     )
-                    .finish()
-                    .eprint(Source::from(ctx.src))
-                    .unwrap();
             }
         }
+        .finish()
+        .eprint(Source::from(ctx.src))
+        .unwrap();
     }
 }

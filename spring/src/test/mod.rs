@@ -31,3 +31,13 @@ fn postfix_match_macro() {
 
     assert_eq!(output, Ok(vec![Value::String("bar")]));
 }
+
+#[test]
+fn two_functions() {
+    let output = run(r#"
+        func main() { output!(1) }
+        func foobar() { output!(2) }
+    "#);
+
+    assert_eq!(output, Ok(vec![Value::Int(1)]));
+}

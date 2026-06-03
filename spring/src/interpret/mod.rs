@@ -3,6 +3,7 @@ pub mod error;
 use std::fmt::Display;
 
 use ariadne::{Color, ColorGenerator, Label, Report, ReportKind, Source};
+use chumsky::span::SpanWrap;
 
 use crate::{
     interpret::error::InterpretError,
@@ -166,7 +167,7 @@ fn eval_macro<'src>(
         "dbg" => {
             let mut colors = ColorGenerator::new();
 
-            let args = args
+            let labels = args
                 .iter()
                 .map(|expr| {
                     Ok(Label::new(((), expr.span.into_range()))
@@ -179,7 +180,7 @@ fn eval_macro<'src>(
                 ReportKind::Custom("Debug", Color::Blue),
                 ((), expr.span.into_range()),
             )
-            .with_labels(args)
+            .with_labels(labels)
             .finish()
             .eprint(Source::from(ctx.src))
             .unwrap();
@@ -190,7 +191,7 @@ fn eval_macro<'src>(
         "ty" => {
             let mut colors = ColorGenerator::new();
 
-            let args = args.iter().map(|expr| {
+            let labels = args.iter().map(|expr| {
                 Label::new(((), expr.span.into_range()))
                     .with_message(format!("{}", expr.ty))
                     .with_color(colors.next())
@@ -200,7 +201,7 @@ fn eval_macro<'src>(
                 ReportKind::Custom("Debug Types", Color::Blue),
                 ((), expr.span.into_range()),
             )
-            .with_labels(args)
+            .with_labels(labels)
             .finish()
             .eprint(Source::from(ctx.src))
             .unwrap();
@@ -217,6 +218,19 @@ fn eval_macro<'src>(
             ctx.test_output.extend(args);
 
             Ok(Value::Unit)
+        }
+
+        "error" => {
+            let args = args
+                .iter()
+                .map(|expr| Ok(eval_expr(expr, ctx)?.with_span(expr.span)))
+                .collect::<Result<_, _>>()?;
+
+            Err(InterpretError::CustomError {
+                args,
+                span: expr.span,
+            }
+            .report(ctx))
         }
 
         _ => Err(InterpretError::UnknownBuiltinError { name: name.clone() }.report(ctx)),
