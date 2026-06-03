@@ -8,14 +8,23 @@ use chumsky::span::Spanned;
 use crate::{
     DummyError,
     parse_tree::{self},
+    type_tree::error::TypeError,
 };
 
 pub use data::*;
-use error::*;
 
 pub struct Context<'src> {
-    pub source: &'src str,
-    pub error_count: u64,
+    pub src: &'src str,
+    pub errors: Vec<TypeError>,
+}
+
+impl<'src> Context<'src> {
+    pub fn new(src: &'src str) -> Self {
+        Self {
+            src,
+            errors: vec![],
+        }
+    }
 }
 
 pub fn type_module<'src>(
@@ -117,7 +126,7 @@ pub fn type_expr<'src>(
                 match pat.inner {
                     Pattern::Int(i) => {
                         if let Some(first_span) = ints_covered.insert(i, pat.span) {
-                            MatchOverlapError {
+                            TypeError::MatchOverlapError {
                                 match_span: expr.span,
                                 first_span,
                                 repeat_span: pat.span,
@@ -131,7 +140,7 @@ pub fn type_expr<'src>(
             }
 
             if !has_discard {
-                MatchMissingDiscardError {
+                TypeError::MatchMissingDiscardError {
                     match_span: expr.span,
                 }
                 .report(ctx);
@@ -159,7 +168,7 @@ pub fn type_expr<'src>(
         ExprKind::String(_) => Type::String,
         ExprKind::BinOp { lhs, rhs, .. } => 'block: {
             if lhs.ty != Type::Int && lhs.ty != Type::Float {
-                TypeMismatchError {
+                TypeError::TypeMismatchError {
                     receive_expr: lhs.span,
                     expected_expr: expr.span,
                     expected: vec![Type::Int, Type::Float],
@@ -170,7 +179,7 @@ pub fn type_expr<'src>(
             }
 
             if lhs.ty != rhs.ty {
-                TypeMismatchError {
+                TypeError::TypeMismatchError {
                     receive_expr: rhs.span,
                     expected_expr: expr.span,
                     expected: vec![lhs.ty.clone()],
@@ -184,7 +193,7 @@ pub fn type_expr<'src>(
         }
         ExprKind::Match { scrutinee, arms } => 'block: {
             if scrutinee.ty != Type::Int {
-                TypeMismatchError {
+                TypeError::TypeMismatchError {
                     received: scrutinee.ty.clone(),
                     receive_expr: scrutinee.span,
                     expected: vec![Type::Int],
@@ -197,7 +206,7 @@ pub fn type_expr<'src>(
             let first = &arms.next().unwrap().1;
             for (_, arm) in arms {
                 if arm.ty != first.ty {
-                    TypeMismatchError {
+                    TypeError::TypeMismatchError {
                         received: arm.ty.clone(),
                         receive_expr: arm.span,
                         expected: vec![first.ty.clone()],

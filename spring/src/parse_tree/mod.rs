@@ -9,11 +9,14 @@ use chumsky::{
 };
 use logos::Logos;
 
-use crate::{DummyError, parse_tree::token::Token};
+use crate::parse_tree::token::Token;
 
 pub use data::*;
 
-pub fn parse(src: &'_ str) -> Result<Spanned<Module<'_>>, DummyError> {
+#[derive(Debug, Clone, PartialEq)]
+pub struct ParseError<'src>(Vec<Rich<'src, Token<'src>>>);
+
+pub fn parse<'src>(src: &'src str) -> Result<Spanned<Module<'src>>, ParseError<'src>> {
     // Create a logos lexer over the source code
     let token_iter = Token::lexer(src)
         .spanned()
@@ -34,7 +37,7 @@ pub fn parse(src: &'_ str) -> Result<Spanned<Module<'_>>, DummyError> {
     // Parse the token stream with our chumsky parser
     // If parsing was unsuccessful, generate a nice user-friendly diagnostic with ariadne
     module().parse(token_stream).into_result().map_err(|errs| {
-        for err in errs {
+        for err in &errs {
             Report::build(ReportKind::Error, ((), err.span().into_range()))
                 .with_config(ariadne::Config::new().with_index_type(ariadne::IndexType::Byte))
                 .with_code(3)
@@ -48,7 +51,7 @@ pub fn parse(src: &'_ str) -> Result<Spanned<Module<'_>>, DummyError> {
                 .eprint(Source::from(src))
                 .unwrap();
         }
-        DummyError
+        ParseError(errs)
     })
 }
 

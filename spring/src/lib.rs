@@ -1,4 +1,8 @@
-use crate::interpret::Value;
+use crate::{
+    interpret::{Value, error::InterpretError},
+    parse_tree::ParseError,
+    type_tree::error::TypeError,
+};
 
 pub mod interpret;
 pub mod parse_tree;
@@ -9,23 +13,29 @@ pub mod type_tree;
 #[derive(Debug, Clone, PartialEq)]
 pub struct DummyError;
 
-pub fn run(src: &'_ str) -> Result<Vec<Value<'_>>, DummyError> {
-    let parse_tree = parse_tree::parse(src).unwrap();
+#[derive(Debug, Clone, PartialEq)]
+pub enum LibError<'src> {
+    ParseError(ParseError<'src>),
+    TypeError(Vec<TypeError>),
+    InterpretError(InterpretError<'src>),
+}
 
-    let mut ctx = type_tree::Context {
-        source: src,
-        error_count: 0,
-    };
+pub fn run<'src>(src: &'src str) -> Result<Vec<Value<'src>>, LibError<'src>> {
+    let parse_tree = parse_tree::parse(src).map_err(LibError::ParseError)?;
 
+    let mut ctx = type_tree::Context::new(src);
     let type_tree = type_tree::type_module(parse_tree, &mut ctx);
 
-    if ctx.error_count > 0 {
-        return Err(DummyError);
-    }
+    let type_tree = if let Ok(value) = type_tree
+        && ctx.errors.is_empty()
+    {
+        value
+    } else {
+        return Err(LibError::TypeError(ctx.errors));
+    };
 
     let mut ctx = interpret::Context::new(src);
-
-    interpret::eval_module(&type_tree.unwrap(), &mut ctx).unwrap();
+    interpret::eval_module(&type_tree, &mut ctx).map_err(LibError::InterpretError)?;
 
     Ok(ctx.test_output)
 }

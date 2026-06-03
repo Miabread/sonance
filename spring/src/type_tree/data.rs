@@ -4,19 +4,19 @@ use chumsky::span::{SimpleSpan, Spanned};
 
 pub use crate::parse_tree::{Op, Pattern};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Module<'src> {
     pub items: Vec<Item<'src>>,
     pub span: SimpleSpan,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Item<'src> {
     pub kind: ItemKind<'src>,
     pub span: SimpleSpan,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ItemKind<'src> {
     Func {
         name: Ident<'src>,
@@ -24,38 +24,38 @@ pub enum ItemKind<'src> {
     },
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Block<'src> {
     pub body: Vec<Statement<'src>>,
     pub span: SimpleSpan,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Ident<'src> {
     pub name: &'src str,
     pub span: SimpleSpan,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Statement<'src> {
     pub kind: StatementKind<'src>,
     pub ty: Type,
     pub span: SimpleSpan,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum StatementKind<'src> {
     Expr(Expr<'src>),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Expr<'src> {
     pub kind: ExprKind<'src>,
     pub ty: Type,
     pub span: SimpleSpan,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ExprKind<'src> {
     Int(u64),
     Float(f64),

@@ -1,11 +1,11 @@
 use chumsky::span::Spanned;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Module<'src> {
     pub items: Vec<Spanned<Item<'src>>>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Item<'src> {
     Func {
         name: Spanned<&'src str>,
@@ -13,17 +13,17 @@ pub enum Item<'src> {
     },
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Block<'src> {
     pub body: Vec<Spanned<Statement<'src>>>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Statement<'src> {
     Expr(Spanned<Expr<'src>>),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Expr<'src> {
     Int(u64),
     Float(f64),
@@ -43,7 +43,7 @@ pub enum Expr<'src> {
     },
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Op {
     Add,
     Sub,
@@ -51,7 +51,7 @@ pub enum Op {
     Div,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Pattern {
     Int(u64),
     Discard,

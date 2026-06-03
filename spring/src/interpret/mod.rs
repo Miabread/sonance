@@ -5,23 +5,21 @@ use std::fmt::Display;
 use ariadne::{Color, ColorGenerator, Label, Report, ReportKind, Source};
 
 use crate::{
-    DummyError,
+    interpret::error::InterpretError,
     type_tree::{
         Block, Expr, ExprKind, Ident, ItemKind, Module, Op, Pattern, Statement, StatementKind, Type,
     },
 };
 
-use error::*;
-
 pub struct Context<'src> {
-    pub source: &'src str,
+    pub src: &'src str,
     pub test_output: Vec<Value<'src>>,
 }
 
 impl<'src> Context<'src> {
-    pub fn new(source: &'src str) -> Self {
+    pub fn new(src: &'src str) -> Self {
         Self {
-            source,
+            src,
             test_output: vec![],
         }
     }
@@ -30,7 +28,7 @@ impl<'src> Context<'src> {
 pub fn eval_module<'src>(
     module: &Module<'src>,
     ctx: &mut Context<'src>,
-) -> Result<Value<'src>, DummyError> {
+) -> Result<Value<'src>, InterpretError<'src>> {
     let body = module
         .items
         .iter()
@@ -51,7 +49,7 @@ pub fn eval_module<'src>(
 pub fn eval_block<'src>(
     block: &Block<'src>,
     ctx: &mut Context<'src>,
-) -> Result<Value<'src>, DummyError> {
+) -> Result<Value<'src>, InterpretError<'src>> {
     let mut output = None;
 
     for stmt in &block.body {
@@ -64,13 +62,16 @@ pub fn eval_block<'src>(
 pub fn eval_stmt<'src>(
     stmt: &Statement<'src>,
     ctx: &mut Context<'src>,
-) -> Result<Value<'src>, DummyError> {
+) -> Result<Value<'src>, InterpretError<'src>> {
     match &stmt.kind {
         StatementKind::Expr(expr) => eval_expr(expr, ctx),
     }
 }
 
-fn eval_expr<'src>(expr: &Expr<'src>, ctx: &mut Context<'src>) -> Result<Value<'src>, DummyError> {
+fn eval_expr<'src>(
+    expr: &Expr<'src>,
+    ctx: &mut Context<'src>,
+) -> Result<Value<'src>, InterpretError<'src>> {
     Ok(match &expr.kind {
         ExprKind::Int(i) => Value::Int(*i),
         ExprKind::Float(f) => Value::Float(*f),
@@ -91,8 +92,9 @@ fn eval_expr<'src>(expr: &Expr<'src>, ctx: &mut Context<'src>) -> Result<Value<'
                     Op::Mul => lhs_value * rhs_value,
                     Op::Div => {
                         if rhs_value == 0 {
-                            DivideByZeroError { span: rhs.span }.report(ctx);
-                            return Err(DummyError);
+                            return Err(
+                                InterpretError::DivideByZeroError { span: rhs.span }.report(ctx)
+                            );
                         }
                         lhs_value / rhs_value
                     }
@@ -143,15 +145,15 @@ fn eval_expr<'src>(expr: &Expr<'src>, ctx: &mut Context<'src>) -> Result<Value<'
 fn eval_macro<'src>(
     expr: &Expr<'src>,
     ctx: &mut Context<'src>,
-    name: &'_ Ident,
-    args: &'_ Vec<Expr<'src>>,
-) -> Result<Value<'src>, DummyError> {
+    name: &Ident<'src>,
+    args: &Vec<Expr<'src>>,
+) -> Result<Value<'src>, InterpretError<'src>> {
     match name.name {
         "print" => {
             let args = args
                 .iter()
                 .map(|expr| eval_expr(expr, ctx))
-                .collect::<Result<Vec<_>, DummyError>>()?;
+                .collect::<Result<Vec<_>, _>>()?;
 
             for arg in args {
                 print!("{}", arg);
@@ -171,7 +173,7 @@ fn eval_macro<'src>(
                         .with_message(format!("{}", eval_expr(expr, ctx)?))
                         .with_color(colors.next()))
                 })
-                .collect::<Result<Vec<_>, DummyError>>()?;
+                .collect::<Result<Vec<_>, _>>()?;
 
             Report::build(
                 ReportKind::Custom("Debug", Color::Blue),
@@ -179,7 +181,7 @@ fn eval_macro<'src>(
             )
             .with_labels(args)
             .finish()
-            .eprint(Source::from(ctx.source))
+            .eprint(Source::from(ctx.src))
             .unwrap();
 
             Ok(Value::Unit)
@@ -200,7 +202,7 @@ fn eval_macro<'src>(
             )
             .with_labels(args)
             .finish()
-            .eprint(Source::from(ctx.source))
+            .eprint(Source::from(ctx.src))
             .unwrap();
 
             Ok(Value::Unit)
@@ -210,17 +212,14 @@ fn eval_macro<'src>(
             let args = args
                 .iter()
                 .map(|expr| eval_expr(expr, ctx))
-                .collect::<Result<Vec<_>, DummyError>>()?;
+                .collect::<Result<Vec<_>, _>>()?;
 
             ctx.test_output.extend(args);
 
             Ok(Value::Unit)
         }
 
-        _ => {
-            UnknownBuiltinError { name: name.clone() }.report(ctx);
-            Err(DummyError)
-        }
+        _ => Err(InterpretError::UnknownBuiltinError { name: name.clone() }.report(ctx)),
     }
 }
 

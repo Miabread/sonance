@@ -3,90 +3,98 @@ use chumsky::span::SimpleSpan;
 
 use crate::type_tree::{Context, Type};
 
-pub struct TypeMismatchError {
-    pub received: Type,
-    pub receive_expr: SimpleSpan,
-    pub expected: Vec<Type>,
-    pub expected_expr: SimpleSpan,
+#[derive(Debug, Clone, PartialEq)]
+pub enum TypeError {
+    TypeMismatchError {
+        received: Type,
+        receive_expr: SimpleSpan,
+        expected: Vec<Type>,
+        expected_expr: SimpleSpan,
+    },
+    MatchOverlapError {
+        match_span: SimpleSpan,
+        first_span: SimpleSpan,
+        repeat_span: SimpleSpan,
+    },
+    MatchMissingDiscardError {
+        match_span: SimpleSpan,
+    },
 }
 
-impl TypeMismatchError {
+impl TypeError {
     pub fn report(self, ctx: &mut Context<'_>) {
-        if self.received == Type::Error {
-            return;
+        ctx.errors.push(self.clone());
+        match self {
+            TypeError::TypeMismatchError {
+                received,
+                receive_expr,
+                expected,
+                expected_expr,
+            } => {
+                if received == Type::Error {
+                    return;
+                }
+
+                let expected = expected
+                    .into_iter()
+                    .map(|ty| format!("{ty}"))
+                    .collect::<Vec<_>>()
+                    .join(" or ");
+
+                Report::build(ReportKind::Error, ((), receive_expr.into_range()))
+                    .with_message(format!(
+                        "expected type {} but got type {}",
+                        expected, received
+                    ))
+                    .with_label(
+                        Label::new(((), receive_expr.into_range()))
+                            .with_message(format!("got type {} here", received))
+                            .with_color(Color::Red),
+                    )
+                    .with_label(
+                        Label::new(((), expected_expr.into_range()))
+                            .with_message(format!("expected type {} here", expected))
+                            .with_color(Color::Blue),
+                    )
+                    .finish()
+                    .eprint(Source::from(ctx.src))
+                    .unwrap();
+            }
+
+            TypeError::MatchOverlapError {
+                match_span,
+                first_span,
+                repeat_span,
+            } => {
+                Report::build(ReportKind::Error, ((), match_span.into_range()))
+                    .with_message("pattern overlaps")
+                    .with_label(
+                        Label::new(((), first_span.into_range()))
+                            .with_message("pattern first used here")
+                            .with_color(Color::Blue),
+                    )
+                    .with_label(
+                        Label::new(((), repeat_span.into_range()))
+                            .with_message("patten repeated here")
+                            .with_color(Color::Red),
+                    )
+                    .finish()
+                    .eprint(Source::from(ctx.src))
+                    .unwrap();
+            }
+
+            TypeError::MatchMissingDiscardError { match_span } => {
+                Report::build(ReportKind::Error, ((), match_span.into_range()))
+                    .with_message("expected discard inside `match` expression")
+                    .with_label(
+                        Label::new(((), match_span.into_range()))
+                            .with_message("`match` expression here")
+                            .with_color(Color::Red),
+                    )
+                    .finish()
+                    .eprint(Source::from(ctx.src))
+                    .unwrap();
+            }
         }
-
-        let expected = self
-            .expected
-            .into_iter()
-            .map(|ty| format!("{ty}"))
-            .collect::<Vec<_>>()
-            .join(" or ");
-
-        ctx.error_count += 1;
-
-        Report::build(ReportKind::Error, ((), self.receive_expr.into_range()))
-            .with_message(format!(
-                "expected type {} but got type {}",
-                expected, self.received
-            ))
-            .with_label(
-                Label::new(((), self.receive_expr.into_range()))
-                    .with_message(format!("got type {} here", self.received))
-                    .with_color(Color::Red),
-            )
-            .with_label(
-                Label::new(((), self.expected_expr.into_range()))
-                    .with_message(format!("expected type {} here", expected))
-                    .with_color(Color::Blue),
-            )
-            .finish()
-            .eprint(Source::from(ctx.source))
-            .unwrap();
-    }
-}
-
-pub struct MatchOverlapError {
-    pub match_span: SimpleSpan,
-    pub first_span: SimpleSpan,
-    pub repeat_span: SimpleSpan,
-}
-
-impl MatchOverlapError {
-    pub fn report(self, ctx: &mut Context<'_>) {
-        Report::build(ReportKind::Error, ((), self.match_span.into_range()))
-            .with_message("pattern overlaps")
-            .with_label(
-                Label::new(((), self.first_span.into_range()))
-                    .with_message("pattern first used here")
-                    .with_color(Color::Blue),
-            )
-            .with_label(
-                Label::new(((), self.repeat_span.into_range()))
-                    .with_message("patten repeated here")
-                    .with_color(Color::Red),
-            )
-            .finish()
-            .eprint(Source::from(ctx.source))
-            .unwrap();
-    }
-}
-
-pub struct MatchMissingDiscardError {
-    pub match_span: SimpleSpan,
-}
-
-impl MatchMissingDiscardError {
-    pub fn report(self, ctx: &mut Context<'_>) {
-        Report::build(ReportKind::Error, ((), self.match_span.into_range()))
-            .with_message("expected discard inside `match` expression")
-            .with_label(
-                Label::new(((), self.match_span.into_range()))
-                    .with_message("`match` expression here")
-                    .with_color(Color::Red),
-            )
-            .finish()
-            .eprint(Source::from(ctx.source))
-            .unwrap();
     }
 }
