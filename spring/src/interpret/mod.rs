@@ -224,7 +224,7 @@ fn eval_macro<'src>(
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Value<'src> {
     Unit,
     Int(u64),
