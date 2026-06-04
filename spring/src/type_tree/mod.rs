@@ -103,14 +103,53 @@ impl<'src> TypeContext<'src> {
         &mut self,
         expr: Spanned<parse_tree::Expr<'src>>,
     ) -> Result<Expr<'src>, DummyError> {
-        let kind = match expr.inner {
-            parse_tree::Expr::Int(i) => ExprKind::Int(i),
-            parse_tree::Expr::Float(f) => ExprKind::Float(f),
-            parse_tree::Expr::String(s) => ExprKind::String(s),
+        Ok(match expr.inner {
+            parse_tree::Expr::Int(i) => Expr {
+                kind: ExprKind::Int(i),
+                ty: Type::Int,
+                span: expr.span,
+            },
+            parse_tree::Expr::Float(f) => Expr {
+                kind: ExprKind::Float(f),
+                ty: Type::Float,
+                span: expr.span,
+            },
+            parse_tree::Expr::String(s) => Expr {
+                kind: ExprKind::String(s),
+                ty: Type::String,
+                span: expr.span,
+            },
             parse_tree::Expr::BinOp { op, lhs, rhs } => {
                 let lhs = Box::new(self.type_expr(*lhs)?);
                 let rhs = Box::new(self.type_expr(*rhs)?);
-                ExprKind::BinOp { op, lhs, rhs }
+
+                let ty = if lhs.ty != Type::Int && lhs.ty != Type::Float {
+                    TypeError::TypeMismatchError {
+                        receive_expr: lhs.span,
+                        expected_expr: expr.span,
+                        expected: vec![Type::Int, Type::Float],
+                        received: lhs.ty.clone(),
+                    }
+                    .report(self);
+                    Type::Error
+                } else if lhs.ty != rhs.ty {
+                    TypeError::TypeMismatchError {
+                        receive_expr: rhs.span,
+                        expected_expr: expr.span,
+                        expected: vec![lhs.ty.clone()],
+                        received: rhs.ty.clone(),
+                    }
+                    .report(self);
+                    Type::Error
+                } else {
+                    Type::Int
+                };
+
+                Expr {
+                    kind: ExprKind::BinOp { op, lhs, rhs },
+                    ty,
+                    span: expr.span,
+                }
             }
             parse_tree::Expr::Match { scrutinee, arms } => {
                 let scrutinee = Box::new(self.type_expr(*scrutinee)?);
@@ -148,51 +187,6 @@ impl<'src> TypeContext<'src> {
                     return Err(DummyError);
                 }
 
-                ExprKind::Match { scrutinee, arms }
-            }
-
-            parse_tree::Expr::Macro { name, args } => {
-                let name = self.type_ident(name);
-
-                let args = args
-                    .into_iter()
-                    .map(|expr| self.type_expr(expr))
-                    .collect::<Result<_, _>>()?;
-
-                ExprKind::Macro { name, args }
-            }
-        };
-
-        let ty = match &kind {
-            ExprKind::Int(_) => Type::Int,
-            ExprKind::Float(_) => Type::Float,
-            ExprKind::String(_) => Type::String,
-            ExprKind::BinOp { lhs, rhs, .. } => 'block: {
-                if lhs.ty != Type::Int && lhs.ty != Type::Float {
-                    TypeError::TypeMismatchError {
-                        receive_expr: lhs.span,
-                        expected_expr: expr.span,
-                        expected: vec![Type::Int, Type::Float],
-                        received: lhs.ty.clone(),
-                    }
-                    .report(self);
-                    break 'block Type::Error;
-                }
-
-                if lhs.ty != rhs.ty {
-                    TypeError::TypeMismatchError {
-                        receive_expr: rhs.span,
-                        expected_expr: expr.span,
-                        expected: vec![lhs.ty.clone()],
-                        received: rhs.ty.clone(),
-                    }
-                    .report(self);
-                    break 'block Type::Error;
-                };
-
-                Type::Int
-            }
-            ExprKind::Match { scrutinee, arms } => 'block: {
                 if scrutinee.ty != Type::Int {
                     TypeError::TypeMismatchError {
                         received: scrutinee.ty.clone(),
@@ -203,29 +197,45 @@ impl<'src> TypeContext<'src> {
                     .report(self);
                 }
 
-                let mut arms = arms.iter();
-                let first = &arms.next().unwrap().1;
-                for (_, arm) in arms {
-                    if arm.ty != first.ty {
-                        TypeError::TypeMismatchError {
-                            received: arm.ty.clone(),
-                            receive_expr: arm.span,
-                            expected: vec![first.ty.clone()],
-                            expected_expr: first.span,
+                let mut arms_iter = arms.iter();
+                let first = &arms_iter.next().unwrap().1;
+                let ty = 'block: {
+                    for (_, arm) in arms_iter {
+                        if arm.ty != first.ty {
+                            TypeError::TypeMismatchError {
+                                received: arm.ty.clone(),
+                                receive_expr: arm.span,
+                                expected: vec![first.ty.clone()],
+                                expected_expr: first.span,
+                            }
+                            .report(self);
+                            break 'block Type::Error;
                         }
-                        .report(self);
-                        break 'block Type::Error;
                     }
-                }
-                first.ty.clone()
-            }
-            ExprKind::Macro { .. } => Type::Unit,
-        };
+                    first.ty.clone()
+                };
 
-        Ok(Expr {
-            kind,
-            ty,
-            span: expr.span,
+                Expr {
+                    kind: ExprKind::Match { scrutinee, arms },
+                    ty,
+                    span: expr.span,
+                }
+            }
+
+            parse_tree::Expr::Macro { name, args } => {
+                let name = self.type_ident(name);
+
+                let args = args
+                    .into_iter()
+                    .map(|expr| self.type_expr(expr))
+                    .collect::<Result<_, _>>()?;
+
+                Expr {
+                    kind: ExprKind::Macro { name, args },
+                    ty: Type::Unit,
+                    span: expr.span,
+                }
+            }
         })
     }
 }
