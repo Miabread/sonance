@@ -1,7 +1,7 @@
 use ariadne::{Color, Label, Report, ReportKind, Source};
 use chumsky::span::SimpleSpan;
 
-use crate::type_tree::{Context, Type};
+use crate::type_tree::{Type, TypeContext};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum TypeError {
@@ -22,7 +22,7 @@ pub enum TypeError {
 }
 
 impl TypeError {
-    pub fn report(self, ctx: &mut Context<'_>) {
+    pub fn report(self, ctx: &mut TypeContext<'_>) {
         ctx.errors.push(self.clone());
         match self {
             TypeError::TypeMismatchError {

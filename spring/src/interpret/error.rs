@@ -2,7 +2,7 @@ use ariadne::{Color, Label, Report, ReportKind, Source};
 use chumsky::span::{SimpleSpan, Spanned};
 
 use crate::{
-    interpret::{Context, Value},
+    interpret::{Interpreter, Value},
     type_tree::Ident,
 };
 
@@ -21,7 +21,7 @@ pub enum InterpretError<'src> {
 }
 
 impl InterpretError<'_> {
-    pub fn report(self, ctx: &mut Context<'_>) -> Self {
+    pub fn report(self, ctx: &mut Interpreter<'_>) -> Self {
         match self.clone() {
             InterpretError::UnknownBuiltinError { name } => {
                 Report::build(ReportKind::Error, ((), name.span.into_range()))
