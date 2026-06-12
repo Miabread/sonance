@@ -1,5 +1,5 @@
 use crate::{
-    interpret::{Interpreter, Value, error::InterpretError},
+    interpret::{Interpreter, error::InterpretError},
     parse_tree::ParseError,
     type_tree::{TypeContext, error::TypeError},
 };
@@ -19,7 +19,7 @@ pub enum LibError<'src> {
     InterpretError(InterpretError<'src>),
 }
 
-pub fn run<'src>(src: &'src str) -> Result<Vec<Value<'src>>, LibError<'src>> {
+pub fn run<'src>(src: &'src str) -> Result<i32, LibError<'src>> {
     let parse_tree = parse_tree::parse(src).map_err(LibError::ParseError)?;
 
     let mut type_ctx = TypeContext::new(src);
@@ -38,5 +38,5 @@ pub fn run<'src>(src: &'src str) -> Result<Vec<Value<'src>>, LibError<'src>> {
         .eval_module(&type_tree)
         .map_err(LibError::InterpretError)?;
 
-    Ok(interpreter.test_output)
+    Ok(0)
 }

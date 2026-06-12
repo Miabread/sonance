@@ -33,15 +33,11 @@ impl Display for Value<'_> {
 
 pub struct Interpreter<'src> {
     pub src: &'src str,
-    pub test_output: Vec<Value<'src>>,
 }
 
 impl<'src> Interpreter<'src> {
     pub fn new(src: &'src str) -> Self {
-        Self {
-            src,
-            test_output: vec![],
-        }
+        Self { src }
     }
 
     pub fn eval_module(
@@ -216,17 +212,6 @@ impl<'src> Interpreter<'src> {
                 .finish()
                 .eprint(Source::from(self.src))
                 .unwrap();
-
-                Ok(Value::Unit)
-            }
-
-            "output" => {
-                let args = args
-                    .iter()
-                    .map(|expr| self.eval_expr(expr))
-                    .collect::<Result<Vec<_>, _>>()?;
-
-                self.test_output.extend(args);
 
                 Ok(Value::Unit)
             }
