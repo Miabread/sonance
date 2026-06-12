@@ -1,9 +1,17 @@
-use std::fs;
+use std::{fs, path::PathBuf};
 
+use clap::Parser;
 use spring::run;
 
+#[derive(clap::Parser)]
+struct Cli {
+    input: PathBuf,
+}
+
 fn main() {
-    let src = fs::read_to_string("scratch/scratch.son").unwrap();
+    let cli = Cli::parse();
+
+    let src = fs::read_to_string(cli.input).unwrap();
 
     let Ok(test_output) = run(&src) else {
         return;

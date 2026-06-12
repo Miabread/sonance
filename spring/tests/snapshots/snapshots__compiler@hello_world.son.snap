@@ -1,0 +1,14 @@
+---
+source: spring/tests/snapshots.rs
+info:
+  program: spring
+  args:
+    - tests/input/hello_world.son
+input_file: spring/tests/input/hello_world.son
+---
+success: true
+exit_code: 0
+----- stdout -----
+Hello world!
+
+----- stderr -----

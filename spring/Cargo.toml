@@ -6,4 +6,9 @@ edition = "2024"
 [dependencies]
 ariadne = "0.6.0"
 chumsky = { version = "0.12.0", features = ["pratt"] }
+clap = { version = "4.6.1", features = ["derive"] }
 logos = "0.16.1"
+
+[dev-dependencies]
+insta = { version = "1.48.0", features = ["glob"] }
+insta-cmd = "0.6.0"

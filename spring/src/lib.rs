@@ -6,8 +6,7 @@ use crate::{
 
 pub mod interpret;
 pub mod parse_tree;
-#[cfg(test)]
-pub mod test;
+
 pub mod type_tree;
 
 #[derive(Debug, Clone, PartialEq)]
