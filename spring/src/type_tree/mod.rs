@@ -48,13 +48,20 @@ impl<'src> TypeContext<'src> {
         item: Spanned<parse_tree::Item<'src>>,
     ) -> Result<Item<'src>, DummyError> {
         Ok(match item.inner {
-            parse_tree::Item::Func { name, body } => Item {
-                kind: ItemKind::Func {
-                    name: self.type_ident(name),
-                    body: self.type_block(body)?,
-                },
+            parse_tree::Item::Func(func) => Item {
+                kind: ItemKind::Func(self.type_func_item(func)?),
                 span: item.span,
             },
+        })
+    }
+
+    pub fn type_func_item(
+        &mut self,
+        func: parse_tree::FuncItem<'src>,
+    ) -> Result<FuncItem<'src>, DummyError> {
+        Ok(FuncItem {
+            name: self.type_ident(func.name),
+            body: self.type_block(func.body)?,
         })
     }
 
@@ -73,9 +80,9 @@ impl<'src> TypeContext<'src> {
         })
     }
 
-    pub fn type_ident(&mut self, ident: Spanned<&'src str>) -> Ident<'src> {
+    pub fn type_ident(&mut self, ident: Spanned<parse_tree::Ident<'src>>) -> Ident<'src> {
         Ident {
-            name: ident.inner,
+            name: ident.inner.0,
             span: ident.span,
         }
     }
@@ -119,7 +126,7 @@ impl<'src> TypeContext<'src> {
                 ty: Type::String,
                 span: expr.span,
             },
-            parse_tree::Expr::BinOp { op, lhs, rhs } => {
+            parse_tree::Expr::BinOp(parse_tree::BinOpExpr { op, lhs, rhs }) => {
                 let lhs = Box::new(self.type_expr(*lhs)?);
                 let rhs = Box::new(self.type_expr(*rhs)?);
 
@@ -146,12 +153,12 @@ impl<'src> TypeContext<'src> {
                 };
 
                 Expr {
-                    kind: ExprKind::BinOp { op, lhs, rhs },
+                    kind: ExprKind::BinOp(BinOpExpr { op, lhs, rhs }),
                     ty,
                     span: expr.span,
                 }
             }
-            parse_tree::Expr::Match { scrutinee, arms } => {
+            parse_tree::Expr::Match(parse_tree::MatchExpr { scrutinee, arms }) => {
                 let scrutinee = Box::new(self.type_expr(*scrutinee)?);
 
                 let arms = arms
@@ -216,13 +223,13 @@ impl<'src> TypeContext<'src> {
                 };
 
                 Expr {
-                    kind: ExprKind::Match { scrutinee, arms },
+                    kind: ExprKind::Match(MatchExpr { scrutinee, arms }),
                     ty,
                     span: expr.span,
                 }
             }
 
-            parse_tree::Expr::Macro { name, args } => {
+            parse_tree::Expr::MacroCall(parse_tree::MacroCallExpr { name, args }) => {
                 let name = self.type_ident(name);
 
                 let args = args
@@ -231,7 +238,7 @@ impl<'src> TypeContext<'src> {
                     .collect::<Result<_, _>>()?;
 
                 Expr {
-                    kind: ExprKind::Macro { name, args },
+                    kind: ExprKind::MacroCall(MacroCallExpr { name, args }),
                     ty: Type::Unit,
                     span: expr.span,
                 }

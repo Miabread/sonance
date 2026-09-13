@@ -53,15 +53,24 @@ pub enum Token<'src> {
     Comma,
     #[token(".")]
     Dot,
+    #[token(":")]
+    Colon,
     #[token("_", priority = 999)]
     Underscore,
 
     #[token("func")]
     Func,
-    #[token("int")]
-    TInt,
     #[token("match")]
     Match,
+
+    #[token("Unit")]
+    TUnit,
+    #[token("Int")]
+    TInt,
+    #[token("Float")]
+    TFloat,
+    #[token("String")]
+    TString,
 }
 
 impl Display for Token<'_> {
@@ -88,10 +97,14 @@ impl Display for Token<'_> {
             Token::Semi => write!(f, ";"),
             Token::Comma => write!(f, ","),
             Token::Dot => write!(f, "."),
+            Token::Colon => write!(f, ":"),
             Token::Underscore => write!(f, "_"),
             Token::Func => write!(f, "func"),
-            Token::TInt => write!(f, "int"),
             Token::Match => write!(f, "match"),
+            Token::TUnit => write!(f, "Unit"),
+            Token::TInt => write!(f, "Int"),
+            Token::TFloat => write!(f, "Float"),
+            Token::TString => write!(f, "String"),
         }
     }
 }

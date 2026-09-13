@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use chumsky::span::{SimpleSpan, Spanned};
 
-pub use crate::parse_tree::{Op, Pattern};
+pub use crate::parse_tree::{BinOp, Pattern};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Module<'src> {
@@ -18,10 +18,13 @@ pub struct Item<'src> {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ItemKind<'src> {
-    Func {
-        name: Ident<'src>,
-        body: Block<'src>,
-    },
+    Func(FuncItem<'src>),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct FuncItem<'src> {
+    pub name: Ident<'src>,
+    pub body: Block<'src>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -60,19 +63,28 @@ pub enum ExprKind<'src> {
     Int(u64),
     Float(f64),
     String(&'src str),
-    BinOp {
-        op: Op,
-        lhs: Box<Expr<'src>>,
-        rhs: Box<Expr<'src>>,
-    },
-    Match {
-        scrutinee: Box<Expr<'src>>,
-        arms: Vec<(Spanned<Pattern>, Expr<'src>)>,
-    },
-    Macro {
-        name: Ident<'src>,
-        args: Vec<Expr<'src>>,
-    },
+    BinOp(BinOpExpr<'src>),
+    Match(MatchExpr<'src>),
+    MacroCall(MacroCallExpr<'src>),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct BinOpExpr<'src> {
+    pub op: BinOp,
+    pub lhs: Box<Expr<'src>>,
+    pub rhs: Box<Expr<'src>>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct MatchExpr<'src> {
+    pub scrutinee: Box<Expr<'src>>,
+    pub arms: Vec<(Spanned<Pattern>, Expr<'src>)>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct MacroCallExpr<'src> {
+    pub name: Ident<'src>,
+    pub args: Vec<Expr<'src>>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

@@ -8,7 +8,8 @@ use chumsky::span::SpanWrap;
 use crate::{
     interpret::error::InterpretError,
     type_tree::{
-        Block, Expr, ExprKind, Ident, ItemKind, Module, Op, Pattern, Statement, StatementKind, Type,
+        BinOp, BinOpExpr, Block, Expr, ExprKind, FuncItem, Ident, ItemKind, MacroCallExpr,
+        MatchExpr, Module, Pattern, Statement, StatementKind, Type,
     },
 };
 
@@ -48,7 +49,7 @@ impl<'src> Interpreter<'src> {
             .items
             .iter()
             .find_map(|item| {
-                if let ItemKind::Func { name, body } = &item.kind
+                if let ItemKind::Func(FuncItem { name, body }) = &item.kind
                     && name.name == "main"
                 {
                     Some(body)
@@ -85,7 +86,7 @@ impl<'src> Interpreter<'src> {
             ExprKind::Int(i) => Value::Int(*i),
             ExprKind::Float(f) => Value::Float(*f),
             ExprKind::String(s) => Value::String(s),
-            ExprKind::BinOp { op, lhs, rhs } => match lhs.ty {
+            ExprKind::BinOp(BinOpExpr { op, lhs, rhs }) => match lhs.ty {
                 Type::Int => {
                     let Value::Int(lhs_value) = self.eval_expr(lhs)? else {
                         panic!("expected int value");
@@ -96,10 +97,10 @@ impl<'src> Interpreter<'src> {
                     };
 
                     Value::Int(match op {
-                        Op::Add => lhs_value + rhs_value,
-                        Op::Sub => lhs_value - rhs_value,
-                        Op::Mul => lhs_value * rhs_value,
-                        Op::Div => {
+                        BinOp::Add => lhs_value + rhs_value,
+                        BinOp::Sub => lhs_value - rhs_value,
+                        BinOp::Mul => lhs_value * rhs_value,
+                        BinOp::Div => {
                             if rhs_value == 0 {
                                 return Err(InterpretError::DivideByZeroError { span: rhs.span }
                                     .report(self));
@@ -118,15 +119,15 @@ impl<'src> Interpreter<'src> {
                     };
 
                     Value::Float(match op {
-                        Op::Add => lhs_value + rhs_value,
-                        Op::Sub => lhs_value - rhs_value,
-                        Op::Mul => lhs_value * rhs_value,
-                        Op::Div => lhs_value / rhs_value,
+                        BinOp::Add => lhs_value + rhs_value,
+                        BinOp::Sub => lhs_value - rhs_value,
+                        BinOp::Mul => lhs_value * rhs_value,
+                        BinOp::Div => lhs_value / rhs_value,
                     })
                 }
                 _ => panic!("bin op unsupported type"),
             },
-            ExprKind::Match { scrutinee, arms } => 'block: {
+            ExprKind::Match(MatchExpr { scrutinee, arms }) => 'block: {
                 let Value::Int(scrutinee) = self.eval_expr(scrutinee)? else {
                     panic!("expected int value");
                 };
@@ -146,7 +147,9 @@ impl<'src> Interpreter<'src> {
 
                 panic!("hit end of match");
             }
-            ExprKind::Macro { name, args } => return self.eval_macro(expr, name, args),
+            ExprKind::MacroCall(MacroCallExpr { name, args }) => {
+                return self.eval_macro(expr, name, args);
+            }
         })
     }
 
@@ -171,7 +174,7 @@ impl<'src> Interpreter<'src> {
                 Ok(Value::Unit)
             }
 
-            "dbg" => {
+            "debug" => {
                 let mut colors = ColorGenerator::new();
 
                 let labels = args
@@ -195,7 +198,7 @@ impl<'src> Interpreter<'src> {
                 Ok(Value::Unit)
             }
 
-            "ty" => {
+            "type" => {
                 let mut colors = ColorGenerator::new();
 
                 let labels = args.iter().map(|expr| {
