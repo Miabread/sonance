@@ -63,6 +63,7 @@ pub enum ExprKind<'src> {
     Int(u64),
     Float(f64),
     String(&'src str),
+    Var(Ident<'src>),
     BinOp(BinOpExpr<'src>),
     Match(MatchExpr<'src>),
     MacroCall(MacroCallExpr<'src>),

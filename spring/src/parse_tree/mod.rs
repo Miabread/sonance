@@ -205,7 +205,9 @@ where
             .map(|(name, args)| Expr::MacroCall(MacroCallExpr { name, args }))
             .spanned();
 
-        let atom = literal.or(paren).or(match_atom).or(macro_atom);
+        let var = ident().map(|v| Expr::Var(v.inner).with_span(v.span));
+
+        let atom = literal.or(paren).or(match_atom).or(macro_atom).or(var);
 
         atom.pratt((
             postfix(

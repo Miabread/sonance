@@ -1,18 +1,20 @@
 pub mod data;
 pub mod error;
+pub mod scope;
 
 use std::collections::HashMap;
 
-use chumsky::span::Spanned;
+use chumsky::span::{SpanWrap, Spanned};
 
 use crate::{
     DummyError,
     parse_tree::{self},
-    type_tree::error::TypeError,
+    type_tree::{error::TypeError, scope::Scope},
 };
 
 pub use data::*;
 
+#[derive(Debug, Clone)]
 pub struct TypeContext<'src> {
     pub src: &'src str,
     pub errors: Vec<TypeError>,
@@ -59,6 +61,10 @@ impl<'src> TypeContext<'src> {
         &mut self,
         func: parse_tree::FuncItem<'src>,
     ) -> Result<FuncItem<'src>, DummyError> {
+        let mut scope = Scope::new();
+        for arg in func.args.inner {
+            scope.set(arg.name, arg.ty);
+        }
         Ok(FuncItem {
             name: self.type_ident(func.name),
             body: self.type_block(func.body)?,
@@ -68,13 +74,14 @@ impl<'src> TypeContext<'src> {
     pub fn type_block(
         &mut self,
         block: Spanned<parse_tree::Block<'src>>,
+        scope: &Scope,
     ) -> Result<Block<'src>, DummyError> {
         Ok(Block {
             body: block
                 .inner
                 .body
                 .into_iter()
-                .map(|stmt| self.type_statement(stmt))
+                .map(|stmt| self.type_statement(stmt, scope))
                 .collect::<Result<_, _>>()?,
             span: block.span,
         })
@@ -90,9 +97,10 @@ impl<'src> TypeContext<'src> {
     pub fn type_statement(
         &mut self,
         stmt: Spanned<parse_tree::Statement<'src>>,
+        scope: &Scope,
     ) -> Result<Statement<'src>, DummyError> {
         let kind = match stmt.inner {
-            parse_tree::Statement::Expr(expr) => StatementKind::Expr(self.type_expr(expr)?),
+            parse_tree::Statement::Expr(expr) => StatementKind::Expr(self.type_expr(expr, scope)?),
         };
 
         let ty = match &kind {
@@ -109,6 +117,7 @@ impl<'src> TypeContext<'src> {
     pub fn type_expr(
         &mut self,
         expr: Spanned<parse_tree::Expr<'src>>,
+        scope: &Scope,
     ) -> Result<Expr<'src>, DummyError> {
         Ok(match expr.inner {
             parse_tree::Expr::Int(i) => Expr {
@@ -126,9 +135,18 @@ impl<'src> TypeContext<'src> {
                 ty: Type::String,
                 span: expr.span,
             },
+            parse_tree::Expr::Var(ident) => {
+                let ident = self.type_ident(ident.with_span(expr.span));
+                let ty = scope.get(&ident).unwrap().clone();
+                Expr {
+                    kind: ExprKind::Var(ident),
+                    ty,
+                    span: expr.span,
+                }
+            }
             parse_tree::Expr::BinOp(parse_tree::BinOpExpr { op, lhs, rhs }) => {
-                let lhs = Box::new(self.type_expr(*lhs)?);
-                let rhs = Box::new(self.type_expr(*rhs)?);
+                let lhs = Box::new(self.type_expr(*lhs, scope)?);
+                let rhs = Box::new(self.type_expr(*rhs, scope)?);
 
                 let ty = if lhs.ty != Type::Int && lhs.ty != Type::Float {
                     TypeError::TypeMismatchError {
@@ -159,11 +177,11 @@ impl<'src> TypeContext<'src> {
                 }
             }
             parse_tree::Expr::Match(parse_tree::MatchExpr { scrutinee, arms }) => {
-                let scrutinee = Box::new(self.type_expr(*scrutinee)?);
+                let scrutinee = Box::new(self.type_expr(*scrutinee, scope)?);
 
                 let arms = arms
                     .into_iter()
-                    .map(|(pat, expr)| Ok((pat, self.type_expr(expr)?)))
+                    .map(|(pat, expr)| Ok((pat, self.type_expr(expr, scope)?)))
                     .collect::<Result<Vec<_>, _>>()?;
 
                 let mut has_discard = false;
@@ -234,7 +252,7 @@ impl<'src> TypeContext<'src> {
 
                 let args = args
                     .into_iter()
-                    .map(|expr| self.type_expr(expr))
+                    .map(|expr| self.type_expr(expr, scope))
                     .collect::<Result<_, _>>()?;
 
                 Expr {
