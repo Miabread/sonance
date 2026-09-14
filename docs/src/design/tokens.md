@@ -32,6 +32,6 @@
 |      | `[]`   | Type parameters / generics                 |
 |      | `!`    | Label declaration, label call              |
 |      | `?`    | Implicit argument, backpassing             |
-|      | `->`   | Return type ascription, match branches     |
+|      | `->`   | Return types, applying traits to modules   |
 |      | `&`    | Shared references                          |
 |      | `$`    | Unique References                          |

@@ -36,8 +36,8 @@ func maybe_sum(x: Option[U32], y: Option[U32]) -> Option[U32] {
 
 ```sonance
 match(foo) {
-  True?,
-  False -> print("nope"),
+    (False) { print("nope") },
+    (True)?,
 };
 
 print("yep");
@@ -49,8 +49,8 @@ Expression returns a tuple.
 
 ```sonance
 match(foo) {
-  Pass(value)?,
-  Fail(error) -> print("oh no: \(error)"),
+    (Fail(error)) { print("oh no: \(error)") },
+    (Pass(value))?,
 };
 
 print("yippee: \(value)");

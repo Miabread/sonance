@@ -20,15 +20,15 @@ condition
 ```sonance
 func then[T](self: Boolean, body: block() -> T) -> Option[T] {
     match(self) {
-        True -> Some(body!()),
-        False -> None,
+        (True) { Some(body!()) },
+        (False) { None },
     }
 }
 
 func else[T](self: Option[T], body: block() -> T) -> T {
     match(self) {
-        Some(value) -> value,
-        None -> body!(),
+        (Some(value)) { value },
+        (None) { body!() },
     }
 }
 ```

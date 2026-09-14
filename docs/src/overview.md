@@ -33,9 +33,13 @@ func main() {
         };
 
         correct.compare(&guess).match {
-            Ordering.Greater -> print("Higher..."),
-            Ordering.Less -> print("Lower..."),
-            Ordering.Equal -> {
+            (Ordering.Greater) { 
+                print("Higher...") 
+            },
+            (Ordering.Less) { 
+                print("Lower...") 
+            },
+            (Ordering.Equal) {
                 print("Correct!");
                 return!();
             },
