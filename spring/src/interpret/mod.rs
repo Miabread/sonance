@@ -86,6 +86,7 @@ impl<'src> Interpreter<'src> {
             ExprKind::Int(i) => Value::Int(*i),
             ExprKind::Float(f) => Value::Float(*f),
             ExprKind::String(s) => Value::String(s),
+            ExprKind::Var(_) => Value::Int(1),
             ExprKind::BinOp(BinOpExpr { op, lhs, rhs }) => match lhs.ty {
                 Type::Int => {
                     let Value::Int(lhs_value) = self.eval_expr(lhs)? else {

@@ -63,11 +63,20 @@ impl<'src> TypeContext<'src> {
     ) -> Result<FuncItem<'src>, DummyError> {
         let mut scope = Scope::new();
         for arg in func.args.inner {
-            scope.set(arg.name, arg.ty);
+            scope.set(arg.name.0, self.type_type(arg.ty)?);
         }
         Ok(FuncItem {
             name: self.type_ident(func.name),
-            body: self.type_block(func.body)?,
+            body: self.type_block(func.body, &scope)?,
+        })
+    }
+
+    pub fn type_type(&mut self, ty: Spanned<parse_tree::Type>) -> Result<Type, DummyError> {
+        Ok(match ty.inner {
+            parse_tree::Type::Unit => Type::Unit,
+            parse_tree::Type::Int => Type::Int,
+            parse_tree::Type::Float => Type::Float,
+            parse_tree::Type::String => Type::String,
         })
     }
 

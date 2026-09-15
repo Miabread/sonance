@@ -20,8 +20,8 @@ impl<'a> Scope<'a> {
         }
     }
 
-    pub fn set(&mut self, ident: &Ident, ty: Type) {
-        if let Some(_) = self.vars.insert(ident.name.to_string(), ty) {
+    pub fn set(&mut self, ident: &str, ty: Type) {
+        if self.vars.insert(ident.to_owned(), ty).is_some() {
             todo!()
         }
     }
