@@ -1,6 +1,5 @@
 func main() -> Unit {
     debug!(1, 2, 3);
-    123
 }
 
 func add(a: Int, b: Int) -> Int {

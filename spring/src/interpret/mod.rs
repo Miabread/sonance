@@ -81,6 +81,7 @@ impl<'src> Interpreter<'src> {
 
     fn eval_expr(&mut self, expr: &Expr<'src>) -> Result<Value<'src>, InterpretError<'src>> {
         Ok(match &expr.kind {
+            ExprKind::Unit => Value::Unit,
             ExprKind::Int(i) => Value::Int(*i),
             ExprKind::Float(f) => Value::Float(*f),
             ExprKind::String(s) => Value::String(s),

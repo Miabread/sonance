@@ -142,7 +142,7 @@ where
             .then_ignore(just(Token::Semi))
             .repeated()
             .collect()
-            .then(expr(block.clone()))
+            .then(expr(block).or_not().spanned())
             .delimited_by(just(Token::OpenBrace), just(Token::CloseBrace))
             .map(|(body, trailing)| Block { body, trailing })
             .spanned()

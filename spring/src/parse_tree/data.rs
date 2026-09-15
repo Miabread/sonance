@@ -30,7 +30,7 @@ pub struct Argument<'src> {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Block<'src> {
     pub body: Vec<Spanned<Statement<'src>>>,
-    pub trailing: Spanned<Expr<'src>>,
+    pub trailing: Spanned<Option<Spanned<Expr<'src>>>>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

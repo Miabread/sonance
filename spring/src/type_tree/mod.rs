@@ -92,7 +92,15 @@ impl<'src> TypeContext<'src> {
             .map(|stmt| self.type_statement(stmt, scope))
             .collect::<Result<_, _>>()?;
 
-        let trailing = self.type_expr(block.inner.trailing, scope)?;
+        let trailing = if let Some(trailing) = block.inner.trailing.inner {
+            self.type_expr(trailing, scope)?
+        } else {
+            Expr {
+                kind: ExprKind::Unit,
+                ty: Type::Unit,
+                span: block.inner.trailing.span,
+            }
+        };
 
         Ok(Block {
             body,

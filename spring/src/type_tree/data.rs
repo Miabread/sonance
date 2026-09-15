@@ -61,6 +61,7 @@ pub struct Expr<'src> {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ExprKind<'src> {
+    Unit,
     Int(u64),
     Float(f64),
     String(&'src str),
