@@ -30,6 +30,7 @@ pub struct FuncItem<'src> {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Block<'src> {
     pub body: Vec<Statement<'src>>,
+    pub trailing: Expr<'src>,
     pub span: SimpleSpan,
 }
 
@@ -79,7 +80,7 @@ pub struct BinOpExpr<'src> {
 #[derive(Debug, Clone, PartialEq)]
 pub struct MatchExpr<'src> {
     pub scrutinee: Box<Expr<'src>>,
-    pub arms: Vec<(Spanned<Pattern>, Expr<'src>)>,
+    pub arms: Vec<(Spanned<Pattern>, Block<'src>)>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

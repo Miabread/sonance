@@ -85,13 +85,18 @@ impl<'src> TypeContext<'src> {
         block: Spanned<parse_tree::Block<'src>>,
         scope: &Scope,
     ) -> Result<Block<'src>, DummyError> {
+        let body = block
+            .inner
+            .body
+            .into_iter()
+            .map(|stmt| self.type_statement(stmt, scope))
+            .collect::<Result<_, _>>()?;
+
+        let trailing = self.type_expr(block.inner.trailing, scope)?;
+
         Ok(Block {
-            body: block
-                .inner
-                .body
-                .into_iter()
-                .map(|stmt| self.type_statement(stmt, scope))
-                .collect::<Result<_, _>>()?,
+            body,
+            trailing,
             span: block.span,
         })
     }
@@ -190,7 +195,7 @@ impl<'src> TypeContext<'src> {
 
                 let arms = arms
                     .into_iter()
-                    .map(|(pat, expr)| Ok((pat, self.type_expr(expr, scope)?)))
+                    .map(|(pat, block)| Ok((pat, self.type_block(block, scope)?)))
                     .collect::<Result<Vec<_>, _>>()?;
 
                 let mut has_discard = false;
@@ -232,13 +237,14 @@ impl<'src> TypeContext<'src> {
                 }
 
                 let mut arms_iter = arms.iter();
-                let first = &arms_iter.next().unwrap().1;
+                let first = &arms_iter.next().unwrap().1.trailing;
                 let ty = 'block: {
-                    for (_, arm) in arms_iter {
-                        if arm.ty != first.ty {
+                    for (_, block) in arms_iter {
+                        let expr = &block.trailing;
+                        if expr.ty != first.ty {
                             TypeError::TypeMismatchError {
-                                received: arm.ty.clone(),
-                                receive_expr: arm.span,
+                                received: expr.ty.clone(),
+                                receive_expr: expr.span,
                                 expected: vec![first.ty.clone()],
                                 expected_expr: first.span,
                             }

@@ -57,7 +57,7 @@ pub fn parse<'src>(src: &'src str) -> Result<Spanned<Module<'src>>, ParseError<'
 }
 
 pub fn module<'tokens, 'src: 'tokens, I>()
--> impl Parser<'tokens, I, Spanned<Module<'src>>, extra::Err<Rich<'tokens, Token<'src>>>>
+-> impl Parser<'tokens, I, Spanned<Module<'src>>, extra::Err<Rich<'tokens, Token<'src>>>> + Clone
 where
     I: ValueInput<'tokens, Token = Token<'src>, Span = SimpleSpan>,
 {
@@ -70,7 +70,7 @@ where
 }
 
 pub fn item<'tokens, 'src: 'tokens, I>()
--> impl Parser<'tokens, I, Spanned<Item<'src>>, extra::Err<Rich<'tokens, Token<'src>>>>
+-> impl Parser<'tokens, I, Spanned<Item<'src>>, extra::Err<Rich<'tokens, Token<'src>>>> + Clone
 where
     I: ValueInput<'tokens, Token = Token<'src>, Span = SimpleSpan>,
 {
@@ -78,7 +78,7 @@ where
 }
 
 pub fn func<'tokens, 'src: 'tokens, I>()
--> impl Parser<'tokens, I, FuncItem<'src>, extra::Err<Rich<'tokens, Token<'src>>>>
+-> impl Parser<'tokens, I, FuncItem<'src>, extra::Err<Rich<'tokens, Token<'src>>>> + Clone
 where
     I: ValueInput<'tokens, Token = Token<'src>, Span = SimpleSpan>,
 {
@@ -118,7 +118,7 @@ where
 }
 
 pub fn ty<'tokens, 'src: 'tokens, I>()
--> impl Parser<'tokens, I, Spanned<Type>, extra::Err<Rich<'tokens, Token<'src>>>>
+-> impl Parser<'tokens, I, Spanned<Type>, extra::Err<Rich<'tokens, Token<'src>>>> + Clone
 where
     I: ValueInput<'tokens, Token = Token<'src>, Span = SimpleSpan>,
 {
@@ -133,30 +133,44 @@ where
 }
 
 pub fn block<'tokens, 'src: 'tokens, I>()
--> impl Parser<'tokens, I, Spanned<Block<'src>>, extra::Err<Rich<'tokens, Token<'src>>>>
+-> impl Parser<'tokens, I, Spanned<Block<'src>>, extra::Err<Rich<'tokens, Token<'src>>>> + Clone
 where
     I: ValueInput<'tokens, Token = Token<'src>, Span = SimpleSpan>,
 {
-    statement()
-        .separated_by(just(Token::Semi))
-        .allow_trailing()
-        .collect()
-        .delimited_by(just(Token::OpenBrace), just(Token::CloseBrace))
-        .map(|statements| Block { body: statements })
+    recursive(|block| {
+        statement(block.clone())
+            .then_ignore(just(Token::Semi))
+            .repeated()
+            .collect()
+            .then(expr(block.clone()))
+            .delimited_by(just(Token::OpenBrace), just(Token::CloseBrace))
+            .map(|(body, trailing)| Block { body, trailing })
+            .spanned()
+            .labelled("block")
+    })
+}
+
+pub fn statement<'tokens, 'src: 'tokens, I>(
+    block: Recursive<
+        dyn Parser<'tokens, I, Spanned<Block<'src>>, extra::Err<Rich<'tokens, Token<'src>>>>
+            + 'tokens,
+    >,
+) -> impl Parser<'tokens, I, Spanned<Statement<'src>>, extra::Err<Rich<'tokens, Token<'src>>>> + Clone
+where
+    I: ValueInput<'tokens, Token = Token<'src>, Span = SimpleSpan>,
+{
+    expr(block)
+        .map(Statement::Expr)
         .spanned()
-        .labelled("block")
+        .labelled("statement")
 }
 
-pub fn statement<'tokens, 'src: 'tokens, I>()
--> impl Parser<'tokens, I, Spanned<Statement<'src>>, extra::Err<Rich<'tokens, Token<'src>>>>
-where
-    I: ValueInput<'tokens, Token = Token<'src>, Span = SimpleSpan>,
-{
-    expr().map(Statement::Expr).spanned().labelled("statement")
-}
-
-pub fn expr<'tokens, 'src: 'tokens, I>()
--> impl Parser<'tokens, I, Spanned<Expr<'src>>, extra::Err<Rich<'tokens, Token<'src>>>>
+pub fn expr<'tokens, 'src: 'tokens, I>(
+    block: Recursive<
+        dyn Parser<'tokens, I, Spanned<Block<'src>>, extra::Err<Rich<'tokens, Token<'src>>>>
+            + 'tokens,
+    >,
+) -> impl Parser<'tokens, I, Spanned<Expr<'src>>, extra::Err<Rich<'tokens, Token<'src>>>> + Clone
 where
     I: ValueInput<'tokens, Token = Token<'src>, Span = SimpleSpan>,
 {
@@ -173,8 +187,8 @@ where
             .delimited_by(just(Token::OpenParen), just(Token::CloseParen));
 
         let match_body = pattern()
-            .then_ignore(just(Token::Arrow))
-            .then(expr.clone())
+            .delimited_by(just(Token::OpenParen), just(Token::CloseParen))
+            .then(block)
             .separated_by(just(Token::Comma))
             .allow_trailing()
             .collect()

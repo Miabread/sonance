@@ -63,13 +63,11 @@ impl<'src> Interpreter<'src> {
     }
 
     pub fn eval_block(&mut self, block: &Block<'src>) -> Result<Value<'src>, InterpretError<'src>> {
-        let mut output = None;
-
         for stmt in &block.body {
-            output = Some(self.eval_stmt(stmt)?);
+            self.eval_stmt(stmt)?;
         }
 
-        Ok(output.unwrap_or(Value::Unit))
+        self.eval_expr(&block.trailing)
     }
 
     pub fn eval_stmt(
@@ -133,15 +131,15 @@ impl<'src> Interpreter<'src> {
                     panic!("expected int value");
                 };
 
-                for (pat, expr) in arms {
+                for (pat, block) in arms {
                     match pat.inner {
                         Pattern::Int(i) => {
                             if scrutinee == i {
-                                break 'block self.eval_expr(expr)?;
+                                break 'block self.eval_block(block)?;
                             }
                         }
                         Pattern::Discard => {
-                            break 'block self.eval_expr(expr)?;
+                            break 'block self.eval_block(block)?;
                         }
                     }
                 }

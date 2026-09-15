@@ -30,6 +30,7 @@ pub struct Argument<'src> {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Block<'src> {
     pub body: Vec<Spanned<Statement<'src>>>,
+    pub trailing: Spanned<Expr<'src>>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -66,7 +67,7 @@ pub enum BinOp {
 #[derive(Debug, Clone, PartialEq)]
 pub struct MatchExpr<'src> {
     pub scrutinee: Box<Spanned<Expr<'src>>>,
-    pub arms: Vec<(Spanned<Pattern>, Spanned<Expr<'src>>)>,
+    pub arms: Vec<(Spanned<Pattern>, Spanned<Block<'src>>)>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
