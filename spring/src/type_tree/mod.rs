@@ -52,7 +52,10 @@ impl<'src> TypeContext<'src> {
         for item in &module.items {
             match &item.inner {
                 parse_tree::Item::Func(func_item) => {
-                    scope.set(func_item.name.0, self.type_func_signature(func_item)?);
+                    scope.set(
+                        func_item.name.0,
+                        self.type_func_signature(func_item.with_span(item.span))?,
+                    );
                 }
             }
         }
@@ -84,7 +87,7 @@ impl<'src> TypeContext<'src> {
 
     pub fn type_func_signature(
         &mut self,
-        func: &parse_tree::FuncItem<'src>,
+        func: Spanned<&parse_tree::FuncItem<'src>>,
     ) -> Result<Type, DummyError> {
         Ok(Type {
             kind: TypeKind::Func {
@@ -95,6 +98,7 @@ impl<'src> TypeContext<'src> {
                     .collect::<Result<_, _>>()?,
                 return_type: Box::new(self.type_type(func.return_type.clone())?),
             },
+            span: func.span,
         })
     }
 
@@ -120,6 +124,7 @@ impl<'src> TypeContext<'src> {
                 parse_tree::Type::Float => TypeKind::Float,
                 parse_tree::Type::String => TypeKind::String,
             },
+            span: ty.span,
         })
     }
 
@@ -142,6 +147,7 @@ impl<'src> TypeContext<'src> {
                 kind: ExprKind::Unit,
                 ty: Type {
                     kind: TypeKind::Unit,
+                    span: block.inner.trailing.span,
                 },
                 span: block.inner.trailing.span,
             }
@@ -191,6 +197,7 @@ impl<'src> TypeContext<'src> {
                 kind: ExprKind::Int(i),
                 ty: Type {
                     kind: TypeKind::Int,
+                    span: expr.span,
                 },
                 span: expr.span,
             },
@@ -198,6 +205,7 @@ impl<'src> TypeContext<'src> {
                 kind: ExprKind::Float(f),
                 ty: Type {
                     kind: TypeKind::Float,
+                    span: expr.span,
                 },
                 span: expr.span,
             },
@@ -205,6 +213,7 @@ impl<'src> TypeContext<'src> {
                 kind: ExprKind::String(s),
                 ty: Type {
                     kind: TypeKind::String,
+                    span: expr.span,
                 },
                 span: expr.span,
             },
@@ -217,6 +226,7 @@ impl<'src> TypeContext<'src> {
                     .report(self);
                     Type {
                         kind: TypeKind::Error,
+                        span: ident.span,
                     }
                 });
 
@@ -254,7 +264,10 @@ impl<'src> TypeContext<'src> {
 
                 Expr {
                     kind: ExprKind::BinOp(BinOpExpr { op, lhs, rhs }),
-                    ty: Type { kind: ty },
+                    ty: Type {
+                        kind: ty,
+                        span: expr.span,
+                    },
                     span: expr.span,
                 }
             }
@@ -319,6 +332,7 @@ impl<'src> TypeContext<'src> {
                             .report(self);
                             break 'block Type {
                                 kind: TypeKind::Error,
+                                span: expr.span,
                             };
                         }
                     }
@@ -348,6 +362,7 @@ impl<'src> TypeContext<'src> {
                     kind: ExprKind::MacroCall(MacroCallExpr { name, args }),
                     ty: Type {
                         kind: TypeKind::Unit,
+                        span: expr.span,
                     },
                     span: expr.span,
                 }

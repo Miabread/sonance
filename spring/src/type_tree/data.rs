@@ -93,6 +93,7 @@ pub struct MacroCallExpr<'src> {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Type {
     pub kind: TypeKind,
+    pub span: SimpleSpan,
 }
 
 #[derive(Debug, Clone, PartialEq)]
