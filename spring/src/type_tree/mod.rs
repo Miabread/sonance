@@ -30,11 +30,33 @@ impl<'src> TypeContext<'src> {
 }
 
 impl<'src> TypeContext<'src> {
+    pub fn unify(&self, a: Type, b: Type) -> Result<Type, DummyError> {
+        match a.kind {
+            TypeKind::Error
+            | TypeKind::Unit
+            | TypeKind::Int
+            | TypeKind::Float
+            | TypeKind::String => {
+                todo!()
+            }
+            TypeKind::Func { args, return_type } => todo!(),
+        }
+    }
+
     pub fn type_module(
         &mut self,
         module: Spanned<parse_tree::Module<'src>>,
     ) -> Result<Module<'src>, DummyError> {
-        let span = module.span;
+        let mut scope = Scope::new();
+
+        for item in &module.items {
+            match &item.inner {
+                parse_tree::Item::Func(func_item) => {
+                    scope.set(func_item.name.0, self.type_func_signature(func_item)?);
+                }
+            }
+        }
+
         let items = module
             .inner
             .items
@@ -42,7 +64,10 @@ impl<'src> TypeContext<'src> {
             .map(|item| self.type_item(item))
             .collect::<Result<_, _>>()?;
 
-        Ok(Module { items, span })
+        Ok(Module {
+            items,
+            span: module.span,
+        })
     }
 
     pub fn type_item(
@@ -53,6 +78,22 @@ impl<'src> TypeContext<'src> {
             parse_tree::Item::Func(func) => Item {
                 kind: ItemKind::Func(self.type_func_item(func)?),
                 span: item.span,
+            },
+        })
+    }
+
+    pub fn type_func_signature(
+        &mut self,
+        func: &parse_tree::FuncItem<'src>,
+    ) -> Result<Type, DummyError> {
+        Ok(Type {
+            kind: TypeKind::Func {
+                args: func
+                    .args
+                    .iter()
+                    .map(|arg| self.type_type(arg.ty.clone()))
+                    .collect::<Result<_, _>>()?,
+                return_type: Box::new(self.type_type(func.return_type.clone())?),
             },
         })
     }
@@ -72,11 +113,13 @@ impl<'src> TypeContext<'src> {
     }
 
     pub fn type_type(&mut self, ty: Spanned<parse_tree::Type>) -> Result<Type, DummyError> {
-        Ok(match ty.inner {
-            parse_tree::Type::Unit => Type::Unit,
-            parse_tree::Type::Int => Type::Int,
-            parse_tree::Type::Float => Type::Float,
-            parse_tree::Type::String => Type::String,
+        Ok(Type {
+            kind: match ty.inner {
+                parse_tree::Type::Unit => TypeKind::Unit,
+                parse_tree::Type::Int => TypeKind::Int,
+                parse_tree::Type::Float => TypeKind::Float,
+                parse_tree::Type::String => TypeKind::String,
+            },
         })
     }
 
@@ -97,7 +140,9 @@ impl<'src> TypeContext<'src> {
         } else {
             Expr {
                 kind: ExprKind::Unit,
-                ty: Type::Unit,
+                ty: Type {
+                    kind: TypeKind::Unit,
+                },
                 span: block.inner.trailing.span,
             }
         };
@@ -144,27 +189,35 @@ impl<'src> TypeContext<'src> {
         Ok(match expr.inner {
             parse_tree::Expr::Int(i) => Expr {
                 kind: ExprKind::Int(i),
-                ty: Type::Int,
+                ty: Type {
+                    kind: TypeKind::Int,
+                },
                 span: expr.span,
             },
             parse_tree::Expr::Float(f) => Expr {
                 kind: ExprKind::Float(f),
-                ty: Type::Float,
+                ty: Type {
+                    kind: TypeKind::Float,
+                },
                 span: expr.span,
             },
             parse_tree::Expr::String(s) => Expr {
                 kind: ExprKind::String(s),
-                ty: Type::String,
+                ty: Type {
+                    kind: TypeKind::String,
+                },
                 span: expr.span,
             },
             parse_tree::Expr::Var(ident) => {
                 let ident = self.type_ident(ident.with_span(expr.span));
-                let ty = scope.get(&ident).cloned().unwrap_or_else(|| {
+                let ty = scope.get(&ident.name).cloned().unwrap_or_else(|| {
                     TypeError::UnknownVariableError {
                         ident_span: ident.span,
                     }
                     .report(self);
-                    Type::Error
+                    Type {
+                        kind: TypeKind::Error,
+                    }
                 });
 
                 Expr {
@@ -177,31 +230,31 @@ impl<'src> TypeContext<'src> {
                 let lhs = Box::new(self.type_expr(*lhs, scope)?);
                 let rhs = Box::new(self.type_expr(*rhs, scope)?);
 
-                let ty = if lhs.ty != Type::Int && lhs.ty != Type::Float {
+                let ty = if lhs.ty.kind != TypeKind::Int && lhs.ty.kind != TypeKind::Float {
                     TypeError::TypeMismatchError {
                         receive_expr: lhs.span,
                         expected_expr: expr.span,
-                        expected: vec![Type::Int, Type::Float],
-                        received: lhs.ty.clone(),
+                        expected: vec![TypeKind::Int, TypeKind::Float],
+                        received: lhs.ty.kind.clone(),
                     }
                     .report(self);
-                    Type::Error
+                    TypeKind::Error
                 } else if lhs.ty != rhs.ty {
                     TypeError::TypeMismatchError {
                         receive_expr: rhs.span,
                         expected_expr: expr.span,
-                        expected: vec![lhs.ty.clone()],
-                        received: rhs.ty.clone(),
+                        expected: vec![lhs.ty.kind.clone()],
+                        received: rhs.ty.kind.clone(),
                     }
                     .report(self);
-                    Type::Error
+                    TypeKind::Error
                 } else {
-                    Type::Int
+                    TypeKind::Int
                 };
 
                 Expr {
                     kind: ExprKind::BinOp(BinOpExpr { op, lhs, rhs }),
-                    ty,
+                    ty: Type { kind: ty },
                     span: expr.span,
                 }
             }
@@ -241,11 +294,11 @@ impl<'src> TypeContext<'src> {
                     return Err(DummyError);
                 }
 
-                if scrutinee.ty != Type::Int {
+                if scrutinee.ty.kind != TypeKind::Int {
                     TypeError::TypeMismatchError {
-                        received: scrutinee.ty.clone(),
+                        received: scrutinee.ty.kind.clone(),
                         receive_expr: scrutinee.span,
-                        expected: vec![Type::Int],
+                        expected: vec![TypeKind::Int],
                         expected_expr: scrutinee.span,
                     }
                     .report(self);
@@ -258,13 +311,15 @@ impl<'src> TypeContext<'src> {
                         let expr = &block.trailing;
                         if expr.ty != first.ty {
                             TypeError::TypeMismatchError {
-                                received: expr.ty.clone(),
+                                received: expr.ty.kind.clone(),
                                 receive_expr: expr.span,
-                                expected: vec![first.ty.clone()],
+                                expected: vec![first.ty.kind.clone()],
                                 expected_expr: first.span,
                             }
                             .report(self);
-                            break 'block Type::Error;
+                            break 'block Type {
+                                kind: TypeKind::Error,
+                            };
                         }
                     }
                     first.ty.clone()
@@ -277,6 +332,10 @@ impl<'src> TypeContext<'src> {
                 }
             }
 
+            parse_tree::Expr::FuncCall(parse_tree::FuncCallExpr { name, args }) => {
+                todo!()
+            }
+
             parse_tree::Expr::MacroCall(parse_tree::MacroCallExpr { name, args }) => {
                 let name = self.type_ident(name);
 
@@ -287,7 +346,9 @@ impl<'src> TypeContext<'src> {
 
                 Expr {
                     kind: ExprKind::MacroCall(MacroCallExpr { name, args }),
-                    ty: Type::Unit,
+                    ty: Type {
+                        kind: TypeKind::Unit,
+                    },
                     span: expr.span,
                 }
             }

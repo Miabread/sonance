@@ -1,14 +1,14 @@
 use ariadne::{Color, Label, Report, ReportKind, Source};
 use chumsky::span::SimpleSpan;
 
-use crate::type_tree::{Type, TypeContext};
+use crate::type_tree::{TypeContext, TypeKind};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum TypeError {
     TypeMismatchError {
-        received: Type,
+        received: TypeKind,
         receive_expr: SimpleSpan,
-        expected: Vec<Type>,
+        expected: Vec<TypeKind>,
         expected_expr: SimpleSpan,
     },
     MatchOverlapError {
@@ -34,7 +34,7 @@ impl TypeError {
                 expected,
                 expected_expr,
             } => {
-                if received == Type::Error {
+                if received == TypeKind::Error {
                     return;
                 }
 

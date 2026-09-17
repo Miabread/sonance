@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::type_tree::{Ident, Type};
+use crate::type_tree::Type;
 
 #[derive(Debug, Clone, Default)]
 pub struct Scope<'a> {
@@ -26,9 +26,9 @@ impl<'a> Scope<'a> {
         }
     }
 
-    pub fn get(&self, ident: &Ident) -> Option<&Type> {
+    pub fn get(&self, ident: &str) -> Option<&Type> {
         self.vars
-            .get(ident.name)
+            .get(ident)
             .or_else(|| self.parent.and_then(|p| p.get(ident)))
     }
 }

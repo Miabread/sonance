@@ -91,22 +91,51 @@ pub struct MacroCallExpr<'src> {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum Type {
+pub struct Type {
+    pub kind: TypeKind,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum TypeKind {
     Error,
     Unit,
     Int,
     Float,
     String,
+    Func {
+        args: Vec<Type>,
+        return_type: Box<Type>,
+    },
 }
 
 impl Display for Type {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Type::Error => write!(f, "<error>"),
-            Type::Unit => write!(f, "Unit"),
-            Type::Int => write!(f, "Int"),
-            Type::Float => write!(f, "Float"),
-            Type::String => write!(f, "String"),
+        write!(f, "{}", self.kind)
+    }
+}
+
+impl Display for TypeKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match &self {
+            TypeKind::Error => write!(f, "<error>"),
+            TypeKind::Unit => write!(f, "Unit"),
+            TypeKind::Int => write!(f, "Int"),
+            TypeKind::Float => write!(f, "Float"),
+            TypeKind::String => write!(f, "String"),
+            TypeKind::Func {
+                args,
+                return_type: ret,
+            } => {
+                write!(f, "func(")?;
+                for (i, arg) in args.iter().enumerate() {
+                    if i == 0 {
+                        write!(f, "{arg}")?;
+                    } else {
+                        write!(f, ", {arg}")?;
+                    }
+                }
+                write!(f, ") -> {ret}")
+            }
         }
     }
 }

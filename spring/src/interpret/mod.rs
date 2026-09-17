@@ -10,7 +10,7 @@ use crate::{
     interpret::{error::InterpretError, scope::Scope},
     type_tree::{
         BinOp, BinOpExpr, Block, Expr, ExprKind, FuncItem, Ident, ItemKind, MacroCallExpr,
-        MatchExpr, Module, Pattern, Statement, StatementKind, Type,
+        MatchExpr, Module, Pattern, Statement, StatementKind, TypeKind,
     },
 };
 
@@ -97,8 +97,8 @@ impl<'src> Interpreter<'src> {
             ExprKind::Float(f) => Value::Float(*f),
             ExprKind::String(s) => Value::String(s),
             ExprKind::Var(v) => scope.get(v.name).expect("variable").clone(),
-            ExprKind::BinOp(BinOpExpr { op, lhs, rhs }) => match lhs.ty {
-                Type::Int => {
+            ExprKind::BinOp(BinOpExpr { op, lhs, rhs }) => match lhs.ty.kind {
+                TypeKind::Int => {
                     let Value::Int(lhs_value) = self.eval_expr(lhs, scope)? else {
                         panic!("expected int value");
                     };
@@ -120,7 +120,7 @@ impl<'src> Interpreter<'src> {
                         }
                     })
                 }
-                Type::Float => {
+                TypeKind::Float => {
                     let Value::Float(lhs_value) = self.eval_expr(lhs, scope)? else {
                         panic!("expected float value");
                     };
