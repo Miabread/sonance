@@ -1,4 +1,5 @@
 pub mod error;
+pub mod scope;
 
 use std::fmt::Display;
 
@@ -6,7 +7,7 @@ use ariadne::{Color, ColorGenerator, Label, Report, ReportKind, Source};
 use chumsky::span::SpanWrap;
 
 use crate::{
-    interpret::error::InterpretError,
+    interpret::{error::InterpretError, scope::Scope},
     type_tree::{
         BinOp, BinOpExpr, Block, Expr, ExprKind, FuncItem, Ident, ItemKind, MacroCallExpr,
         MatchExpr, Module, Pattern, Statement, StatementKind, Type,
@@ -59,40 +60,50 @@ impl<'src> Interpreter<'src> {
             })
             .expect("meow");
 
-        self.eval_block(body)
+        let mut scope = Scope::new();
+        self.eval_block(body, &mut scope)
     }
 
-    pub fn eval_block(&mut self, block: &Block<'src>) -> Result<Value<'src>, InterpretError<'src>> {
+    pub fn eval_block(
+        &mut self,
+        block: &Block<'src>,
+        scope: &mut Scope<'src, '_>,
+    ) -> Result<Value<'src>, InterpretError<'src>> {
         for stmt in &block.body {
-            self.eval_stmt(stmt)?;
+            self.eval_stmt(stmt, scope)?;
         }
 
-        self.eval_expr(&block.trailing)
+        self.eval_expr(&block.trailing, scope)
     }
 
     pub fn eval_stmt(
         &mut self,
         stmt: &Statement<'src>,
+        scope: &mut Scope<'src, '_>,
     ) -> Result<Value<'src>, InterpretError<'src>> {
         match &stmt.kind {
-            StatementKind::Expr(expr) => self.eval_expr(expr),
+            StatementKind::Expr(expr) => self.eval_expr(expr, scope),
         }
     }
 
-    fn eval_expr(&mut self, expr: &Expr<'src>) -> Result<Value<'src>, InterpretError<'src>> {
+    fn eval_expr(
+        &mut self,
+        expr: &Expr<'src>,
+        scope: &mut Scope<'src, '_>,
+    ) -> Result<Value<'src>, InterpretError<'src>> {
         Ok(match &expr.kind {
             ExprKind::Unit => Value::Unit,
             ExprKind::Int(i) => Value::Int(*i),
             ExprKind::Float(f) => Value::Float(*f),
             ExprKind::String(s) => Value::String(s),
-            ExprKind::Var(_) => Value::Int(1),
+            ExprKind::Var(v) => scope.get(v.name).expect("variable").clone(),
             ExprKind::BinOp(BinOpExpr { op, lhs, rhs }) => match lhs.ty {
                 Type::Int => {
-                    let Value::Int(lhs_value) = self.eval_expr(lhs)? else {
+                    let Value::Int(lhs_value) = self.eval_expr(lhs, scope)? else {
                         panic!("expected int value");
                     };
 
-                    let Value::Int(rhs_value) = self.eval_expr(rhs)? else {
+                    let Value::Int(rhs_value) = self.eval_expr(rhs, scope)? else {
                         panic!("expected int value");
                     };
 
@@ -110,11 +121,11 @@ impl<'src> Interpreter<'src> {
                     })
                 }
                 Type::Float => {
-                    let Value::Float(lhs_value) = self.eval_expr(lhs)? else {
+                    let Value::Float(lhs_value) = self.eval_expr(lhs, scope)? else {
                         panic!("expected float value");
                     };
 
-                    let Value::Float(rhs_value) = self.eval_expr(rhs)? else {
+                    let Value::Float(rhs_value) = self.eval_expr(rhs, scope)? else {
                         panic!("expected float value");
                     };
 
@@ -128,7 +139,7 @@ impl<'src> Interpreter<'src> {
                 _ => panic!("bin op unsupported type"),
             },
             ExprKind::Match(MatchExpr { scrutinee, arms }) => 'block: {
-                let Value::Int(scrutinee) = self.eval_expr(scrutinee)? else {
+                let Value::Int(scrutinee) = self.eval_expr(scrutinee, scope)? else {
                     panic!("expected int value");
                 };
 
@@ -136,11 +147,11 @@ impl<'src> Interpreter<'src> {
                     match pat.inner {
                         Pattern::Int(i) => {
                             if scrutinee == i {
-                                break 'block self.eval_block(block)?;
+                                break 'block self.eval_block(block, scope)?;
                             }
                         }
                         Pattern::Discard => {
-                            break 'block self.eval_block(block)?;
+                            break 'block self.eval_block(block, scope)?;
                         }
                     }
                 }
@@ -148,7 +159,7 @@ impl<'src> Interpreter<'src> {
                 panic!("hit end of match");
             }
             ExprKind::MacroCall(MacroCallExpr { name, args }) => {
-                return self.eval_macro(expr, name, args);
+                return self.eval_macro(expr, name, args, scope);
             }
         })
     }
@@ -158,12 +169,13 @@ impl<'src> Interpreter<'src> {
         expr: &Expr<'src>,
         name: &Ident<'src>,
         args: &Vec<Expr<'src>>,
+        scope: &mut Scope<'src, '_>,
     ) -> Result<Value<'src>, InterpretError<'src>> {
         match name.name {
             "print" => {
                 let args = args
                     .iter()
-                    .map(|expr| self.eval_expr(expr))
+                    .map(|expr| self.eval_expr(expr, scope))
                     .collect::<Result<Vec<_>, _>>()?;
 
                 for arg in args {
@@ -181,7 +193,7 @@ impl<'src> Interpreter<'src> {
                     .iter()
                     .map(|expr| {
                         Ok(Label::new(((), expr.span.into_range()))
-                            .with_message(format!("{}", self.eval_expr(expr)?))
+                            .with_message(format!("{}", self.eval_expr(expr, scope)?))
                             .with_color(colors.next()))
                     })
                     .collect::<Result<Vec<_>, _>>()?;
@@ -222,7 +234,7 @@ impl<'src> Interpreter<'src> {
             "error" => {
                 let args = args
                     .iter()
-                    .map(|expr| Ok(self.eval_expr(expr)?.with_span(expr.span)))
+                    .map(|expr| Ok(self.eval_expr(expr, scope)?.with_span(expr.span)))
                     .collect::<Result<_, _>>()?;
 
                 Err(InterpretError::CustomError {

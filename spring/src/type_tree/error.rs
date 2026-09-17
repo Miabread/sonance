@@ -19,6 +19,9 @@ pub enum TypeError {
     MatchMissingDiscardError {
         match_span: SimpleSpan,
     },
+    UnknownVariableError {
+        ident_span: SimpleSpan,
+    },
 }
 
 impl TypeError {
@@ -81,6 +84,16 @@ impl TypeError {
                     .with_label(
                         Label::new(((), match_span.into_range()))
                             .with_message("`match` expression here")
+                            .with_color(Color::Red),
+                    )
+            }
+
+            TypeError::UnknownVariableError { ident_span } => {
+                Report::build(ReportKind::Error, ((), ident_span.into_range()))
+                    .with_message("unknown variable")
+                    .with_label(
+                        Label::new(((), ident_span.into_range()))
+                            .with_message("used here")
                             .with_color(Color::Red),
                     )
             }

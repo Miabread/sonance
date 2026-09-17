@@ -159,7 +159,14 @@ impl<'src> TypeContext<'src> {
             },
             parse_tree::Expr::Var(ident) => {
                 let ident = self.type_ident(ident.with_span(expr.span));
-                let ty = scope.get(&ident).unwrap().clone();
+                let ty = scope.get(&ident).cloned().unwrap_or_else(|| {
+                    TypeError::UnknownVariableError {
+                        ident_span: ident.span,
+                    }
+                    .report(self);
+                    Type::Error
+                });
+
                 Expr {
                     kind: ExprKind::Var(ident),
                     ty,
