@@ -46,6 +46,7 @@ pub enum Expr<'src> {
     Var(Ident<'src>),
     BinOp(BinOpExpr<'src>),
     Match(MatchExpr<'src>),
+    FuncCall(FuncCallExpr<'src>),
     MacroCall(MacroCallExpr<'src>),
 }
 
@@ -74,6 +75,12 @@ pub struct MatchExpr<'src> {
 pub enum Pattern {
     Int(u64),
     Discard,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct FuncCallExpr<'src> {
+    pub name: Spanned<Ident<'src>>,
+    pub args: Vec<Spanned<Expr<'src>>>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

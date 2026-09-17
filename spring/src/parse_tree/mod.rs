@@ -211,17 +211,26 @@ where
             .collect()
             .delimited_by(just(Token::OpenParen), just(Token::CloseParen));
 
-        let macro_start = ident().then_ignore(just(Token::Bang));
-
-        let macro_atom = macro_start
-            .clone()
+        let macro_call_atom = ident()
+            .then_ignore(just(Token::Bang))
             .then(args.clone())
             .map(|(name, args)| Expr::MacroCall(MacroCallExpr { name, args }))
             .spanned();
 
+        let func_call_atom = ident()
+            .clone()
+            .then(args.clone())
+            .map(|(name, args)| Expr::FuncCall(FuncCallExpr { name, args }))
+            .spanned();
+
         let var = ident().map(|v| Expr::Var(v.inner).with_span(v.span));
 
-        let atom = literal.or(paren).or(match_atom).or(macro_atom).or(var);
+        let atom = literal
+            .or(paren)
+            .or(match_atom)
+            .or(macro_call_atom)
+            .or(func_call_atom)
+            .or(var);
 
         atom.pratt((
             postfix(
@@ -240,12 +249,23 @@ where
             postfix(
                 3,
                 just(Token::Dot)
-                    .ignore_then(macro_start)
-                    .then(args.repeated().at_most(1).collect()),
+                    .ignore_then(ident().then_ignore(just(Token::Bang)))
+                    .then(args.clone().repeated().at_most(1).collect()),
                 |first_arg, (name, test): (_, Vec<_>), ctx| {
                     let mut args: Vec<_> = test.into_iter().next().unwrap_or_default();
                     args.insert(0, first_arg);
                     Expr::MacroCall(MacroCallExpr { name, args }).with_span(ctx.span())
+                },
+            ),
+            postfix(
+                3,
+                just(Token::Dot)
+                    .ignore_then(ident())
+                    .then(args.repeated().at_most(1).collect()),
+                |first_arg, (name, test): (_, Vec<_>), ctx| {
+                    let mut args: Vec<_> = test.into_iter().next().unwrap_or_default();
+                    args.insert(0, first_arg);
+                    Expr::FuncCall(FuncCallExpr { name, args }).with_span(ctx.span())
                 },
             ),
             infix(left(2), just(Token::Mul), |lhs, _, rhs, ctx| {
