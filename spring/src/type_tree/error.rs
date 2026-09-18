@@ -1,15 +1,13 @@
 use ariadne::{Color, Label, Report, ReportKind, Source};
 use chumsky::span::SimpleSpan;
 
-use crate::type_tree::{TypeContext, TypeKind};
+use crate::type_tree::{Type, TypeContext};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum TypeError {
-    TypeMismatchError {
-        received: TypeKind,
-        receive_expr: SimpleSpan,
-        expected: Vec<TypeKind>,
-        expected_expr: SimpleSpan,
+    UnifyError {
+        expected: Type,
+        received: Type,
     },
     MatchOverlapError {
         match_span: SimpleSpan,
@@ -28,34 +26,19 @@ impl TypeError {
     pub fn report(self, ctx: &mut TypeContext<'_>) {
         ctx.errors.push(self.clone());
         match self {
-            TypeError::TypeMismatchError {
-                received,
-                receive_expr,
-                expected,
-                expected_expr,
-            } => {
-                if received == TypeKind::Error {
-                    return;
-                }
-
-                let expected = expected
-                    .into_iter()
-                    .map(|ty| format!("{ty}"))
-                    .collect::<Vec<_>>()
-                    .join(" or ");
-
-                Report::build(ReportKind::Error, ((), receive_expr.into_range()))
+            TypeError::UnifyError { expected, received } => {
+                Report::build(ReportKind::Error, ((), received.span.into_range()))
                     .with_message(format!(
                         "expected type {} but got type {}",
                         expected, received
                     ))
                     .with_label(
-                        Label::new(((), receive_expr.into_range()))
+                        Label::new(((), received.span.into_range()))
                             .with_message(format!("got type {} here", received))
                             .with_color(Color::Red),
                     )
                     .with_label(
-                        Label::new(((), expected_expr.into_range()))
+                        Label::new(((), expected.span.into_range()))
                             .with_message(format!("expected type {} here", expected))
                             .with_color(Color::Blue),
                     )

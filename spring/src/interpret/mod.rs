@@ -8,9 +8,10 @@ use chumsky::span::SpanWrap;
 
 use crate::{
     interpret::{error::InterpretError, scope::Scope},
+    parse_tree::BinOp,
     type_tree::{
-        BinOp, BinOpExpr, Block, Expr, ExprKind, FuncItem, Ident, ItemKind, MacroCallExpr,
-        MatchExpr, Module, Pattern, Statement, StatementKind, TypeKind,
+        BinOpExpr, Block, Expr, ExprKind, FuncItem, Ident, ItemKind, MacroCallExpr, MatchExpr,
+        Module, Pattern, Statement, StatementKind, TypeKind,
     },
 };
 
@@ -20,6 +21,32 @@ pub enum Value<'src> {
     Int(u64),
     Float(f64),
     String(&'src str),
+}
+
+impl<'src> Value<'src> {
+    pub fn expect_int(self) -> u64 {
+        if let Self::Int(v) = self {
+            v
+        } else {
+            panic!("expected int value")
+        }
+    }
+
+    pub fn expect_float(self) -> f64 {
+        if let Self::Float(v) = self {
+            v
+        } else {
+            panic!("expected float value")
+        }
+    }
+
+    pub fn expect_string(self) -> &'src str {
+        if let Self::String(v) = self {
+            v
+        } else {
+            panic!("expected string value")
+        }
+    }
 }
 
 impl Display for Value<'_> {
@@ -99,13 +126,8 @@ impl<'src> Interpreter<'src> {
             ExprKind::Var(v) => scope.get(v.name).expect("variable").clone(),
             ExprKind::BinOp(BinOpExpr { op, lhs, rhs }) => match lhs.ty.kind {
                 TypeKind::Int => {
-                    let Value::Int(lhs_value) = self.eval_expr(lhs, scope)? else {
-                        panic!("expected int value");
-                    };
-
-                    let Value::Int(rhs_value) = self.eval_expr(rhs, scope)? else {
-                        panic!("expected int value");
-                    };
+                    let lhs_value = self.eval_expr(lhs, scope)?.expect_int();
+                    let rhs_value = self.eval_expr(rhs, scope)?.expect_int();
 
                     Value::Int(match op {
                         BinOp::Add => lhs_value + rhs_value,
@@ -121,13 +143,8 @@ impl<'src> Interpreter<'src> {
                     })
                 }
                 TypeKind::Float => {
-                    let Value::Float(lhs_value) = self.eval_expr(lhs, scope)? else {
-                        panic!("expected float value");
-                    };
-
-                    let Value::Float(rhs_value) = self.eval_expr(rhs, scope)? else {
-                        panic!("expected float value");
-                    };
+                    let lhs_value = self.eval_expr(lhs, scope)?.expect_float();
+                    let rhs_value = self.eval_expr(rhs, scope)?.expect_float();
 
                     Value::Float(match op {
                         BinOp::Add => lhs_value + rhs_value,

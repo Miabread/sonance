@@ -2,7 +2,8 @@ use std::fmt::Display;
 
 use chumsky::span::{SimpleSpan, Spanned};
 
-pub use crate::parse_tree::{BinOp, Pattern};
+use crate::parse_tree::BinOp;
+pub use crate::parse_tree::Pattern;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Module<'src> {
@@ -96,6 +97,12 @@ pub struct Type {
     pub span: SimpleSpan,
 }
 
+impl Type {
+    pub fn is_error(&self) -> bool {
+        self.kind == TypeKind::Error
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum TypeKind {
     Error,
@@ -103,10 +110,13 @@ pub enum TypeKind {
     Int,
     Float,
     String,
-    Func {
-        args: Vec<Type>,
-        return_type: Box<Type>,
-    },
+    Func(FuncTypeKind),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct FuncTypeKind {
+    pub args: Vec<Type>,
+    pub return_type: Box<Type>,
 }
 
 impl Display for Type {
@@ -123,10 +133,7 @@ impl Display for TypeKind {
             TypeKind::Int => write!(f, "Int"),
             TypeKind::Float => write!(f, "Float"),
             TypeKind::String => write!(f, "String"),
-            TypeKind::Func {
-                args,
-                return_type: ret,
-            } => {
+            TypeKind::Func(FuncTypeKind { args, return_type }) => {
                 write!(f, "func(")?;
                 for (i, arg) in args.iter().enumerate() {
                     if i == 0 {
@@ -135,7 +142,7 @@ impl Display for TypeKind {
                         write!(f, ", {arg}")?;
                     }
                 }
-                write!(f, ") -> {ret}")
+                write!(f, ") -> {return_type}")
             }
         }
     }

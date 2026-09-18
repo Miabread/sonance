@@ -30,16 +30,47 @@ impl<'src> TypeContext<'src> {
 }
 
 impl<'src> TypeContext<'src> {
-    pub fn unify(&self, a: Type, b: Type) -> Result<Type, DummyError> {
-        match a.kind {
-            TypeKind::Error
-            | TypeKind::Unit
-            | TypeKind::Int
-            | TypeKind::Float
-            | TypeKind::String => {
-                todo!()
+    pub fn unify(&mut self, expected: Type, received: Type) -> Type {
+        self.try_unify(expected.clone(), received.clone())
+            .unwrap_or_else(|ty| {
+                TypeError::UnifyError { expected, received }.report(self);
+                ty
+            })
+    }
+
+    pub fn try_unify(&mut self, expected: Type, received: Type) -> Result<Type, Type> {
+        match (&expected.kind, &received.kind) {
+            (TypeKind::Error, _) => Err(expected),
+            (_, TypeKind::Error) => Err(received),
+
+            (TypeKind::Unit | TypeKind::Int | TypeKind::Float | TypeKind::String, _)
+                if expected.kind == received.kind =>
+            {
+                Ok(expected)
             }
-            TypeKind::Func { args, return_type } => todo!(),
+
+            (TypeKind::Func(a), TypeKind::Func(b)) if a.args.len() == b.args.len() => {
+                let args = a
+                    .args
+                    .iter()
+                    .cloned()
+                    .zip(b.args.iter().cloned())
+                    .map(|(a, b)| self.try_unify(a, b))
+                    .collect::<Result<_, _>>()?;
+
+                let return_type =
+                    Box::new(self.try_unify(*b.return_type.clone(), *b.return_type.clone())?);
+
+                Ok(Type {
+                    kind: TypeKind::Func(FuncTypeKind { args, return_type }),
+                    span: expected.span,
+                })
+            }
+
+            _ => Err(Type {
+                kind: TypeKind::Error,
+                span: received.span,
+            }),
         }
     }
 
@@ -90,14 +121,14 @@ impl<'src> TypeContext<'src> {
         func: Spanned<&parse_tree::FuncItem<'src>>,
     ) -> Result<Type, DummyError> {
         Ok(Type {
-            kind: TypeKind::Func {
+            kind: TypeKind::Func(FuncTypeKind {
                 args: func
                     .args
                     .iter()
                     .map(|arg| self.type_type(arg.ty.clone()))
                     .collect::<Result<_, _>>()?,
                 return_type: Box::new(self.type_type(func.return_type.clone())?),
-            },
+            }),
             span: func.span,
         })
     }
@@ -219,7 +250,7 @@ impl<'src> TypeContext<'src> {
             },
             parse_tree::Expr::Var(ident) => {
                 let ident = self.type_ident(ident.with_span(expr.span));
-                let ty = scope.get(&ident.name).cloned().unwrap_or_else(|| {
+                let ty = scope.get(ident.name).cloned().unwrap_or_else(|| {
                     TypeError::UnknownVariableError {
                         ident_span: ident.span,
                     }
@@ -240,34 +271,30 @@ impl<'src> TypeContext<'src> {
                 let lhs = Box::new(self.type_expr(*lhs, scope)?);
                 let rhs = Box::new(self.type_expr(*rhs, scope)?);
 
-                let ty = if lhs.ty.kind != TypeKind::Int && lhs.ty.kind != TypeKind::Float {
-                    TypeError::TypeMismatchError {
-                        receive_expr: lhs.span,
-                        expected_expr: expr.span,
-                        expected: vec![TypeKind::Int, TypeKind::Float],
-                        received: lhs.ty.kind.clone(),
-                    }
-                    .report(self);
-                    TypeKind::Error
-                } else if lhs.ty != rhs.ty {
-                    TypeError::TypeMismatchError {
-                        receive_expr: rhs.span,
-                        expected_expr: expr.span,
-                        expected: vec![lhs.ty.kind.clone()],
-                        received: rhs.ty.kind.clone(),
-                    }
-                    .report(self);
-                    TypeKind::Error
+                let int = Type {
+                    kind: TypeKind::Int,
+                    span: expr.span,
+                };
+                let float = Type {
+                    kind: TypeKind::Float,
+                    span: expr.span,
+                };
+
+                let ty = if self.try_unify(int.clone(), lhs.ty.clone()).is_ok() {
+                    self.unify(lhs.ty.clone(), rhs.ty.clone())
+                } else if self.try_unify(int, rhs.ty.clone()).is_ok() {
+                    self.unify(rhs.ty.clone(), lhs.ty.clone())
+                } else if self.try_unify(float.clone(), lhs.ty.clone()).is_ok() {
+                    self.unify(lhs.ty.clone(), rhs.ty.clone())
+                } else if self.try_unify(float, rhs.ty.clone()).is_ok() {
+                    self.unify(rhs.ty.clone(), lhs.ty.clone())
                 } else {
-                    TypeKind::Int
+                    todo!()
                 };
 
                 Expr {
                     kind: ExprKind::BinOp(BinOpExpr { op, lhs, rhs }),
-                    ty: Type {
-                        kind: ty,
-                        span: expr.span,
-                    },
+                    ty,
                     span: expr.span,
                 }
             }
@@ -307,33 +334,21 @@ impl<'src> TypeContext<'src> {
                     return Err(DummyError);
                 }
 
-                if scrutinee.ty.kind != TypeKind::Int {
-                    TypeError::TypeMismatchError {
-                        received: scrutinee.ty.kind.clone(),
-                        receive_expr: scrutinee.span,
-                        expected: vec![TypeKind::Int],
-                        expected_expr: scrutinee.span,
-                    }
-                    .report(self);
-                }
+                self.unify(
+                    Type {
+                        kind: TypeKind::Int,
+                        span: expr.span,
+                    },
+                    scrutinee.ty.clone(),
+                );
 
                 let mut arms_iter = arms.iter();
                 let first = &arms_iter.next().unwrap().1.trailing;
                 let ty = 'block: {
                     for (_, block) in arms_iter {
-                        let expr = &block.trailing;
-                        if expr.ty != first.ty {
-                            TypeError::TypeMismatchError {
-                                received: expr.ty.kind.clone(),
-                                receive_expr: expr.span,
-                                expected: vec![first.ty.kind.clone()],
-                                expected_expr: first.span,
-                            }
-                            .report(self);
-                            break 'block Type {
-                                kind: TypeKind::Error,
-                                span: expr.span,
-                            };
+                        let ty = self.unify(first.ty.clone(), block.trailing.ty.clone());
+                        if ty.is_error() {
+                            break 'block ty;
                         }
                     }
                     first.ty.clone()
